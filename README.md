@@ -162,16 +162,10 @@ npm run 2
 Create a `.env` file in the root directory:
 
 ```env
-# MongoDB Configuration
-MONGODB_URI=mongodb://localhost:27017/loan_management
-
-# Excel File Paths
-CASHBOOK_FILEPATH=/path/to/cashbook.xlsx
-PERSONAL_ACCOUNT_ROOTPATH=/path/to/personal_accounts/
-
-# Application Settings
-FLASK_ENV=development
-SECRET_KEY=your-secret-key-here
+MONGO_URI=
+BACKEND_HOST=
+CASHBOOK_FILEPATH=
+PERSONAL_ACCOUNT_ROOTPATH=
 ```
 
 ### Database Setup
@@ -273,28 +267,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 🙏 Acknowledgments
-
-- Built with ❤️ for financial institutions
-- Inspired by the need for efficient loan management
-- Thanks to all contributors and testers
-
 ---
 
 ## 📞 Support
 
 Having issues or questions? We're here to help!
 
-- 📧 **Email**: support@loanmanagement.com
-- 📖 **Documentation**: [Full Documentation](docs/)
-- 🐛 **Bug Reports**: [GitHub Issues](issues/)
-- 💬 **Discussions**: [GitHub Discussions](discussions/)
-
+- 📧 **Email**: nipunviraj24@gmail.com
 ---
 
 <div align="center">
 
-**Made with 💻 and ☕ for better financial management**
+**Made by Nipun Viraj**
 
 ⭐ **Star this repo if it helped you!** ⭐
 
