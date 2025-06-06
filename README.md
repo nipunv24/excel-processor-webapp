@@ -70,21 +70,37 @@ Before you begin, ensure you have the following installed:
    cd loan-management-system
    ```
 
-2. **Setup Frontend (Angular)**
+2. **Setup Backend (Flask)**
    ```bash
-   # Install Node modules
-   npm install
-   ```
-
-3. **Setup Backend (Flask)**
-   ```bash
+   # Navigate to backend folder
+   cd backend
+   
+   # Create virtual environment
+   python -m venv venv
+   
+   # Activate virtual environment
+   # Windows (Git Bash/PowerShell):
+   source venv/Scripts/activate
+   # Linux/Mac:
+   source venv/bin/activate
+   
    # Install Python dependencies
    pip install -r requirements.txt
    ```
 
+3. **Setup Frontend (Angular)**
+   ```bash
+   # Navigate to frontend folder (from root)
+   cd ../frontend
+   
+   # Install Node modules
+   npm install
+   ```
+
 4. **Environment Configuration**
    ```bash
-   # Create .env file and configure your settings
+   # Go back to root and create .env file
+   cd ..
    cp .env.example .env
    # Edit .env with your MongoDB connection and file paths
    ```
@@ -93,15 +109,19 @@ Before you begin, ensure you have the following installed:
 
 #### Start Frontend (Angular)
 ```bash
+# From root folder
 npm run 1
 ```
 *Frontend will be available at `http://localhost:4200`*
 
 #### Start Backend (Flask)
 ```bash
+# Open a new terminal, navigate to root folder
 npm run 2
 ```
 *Backend API will be available at `http://localhost:5000`*
+
+> **Note**: Make sure to activate your virtual environment in the backend folder before running the Flask application if you're running it manually.
 
 ---
 
