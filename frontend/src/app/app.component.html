@@ -1,0 +1,46 @@
+<div class="app-container">
+  <header>
+    <div class="header-content">
+      <h1>Algola Customer Management System</h1>
+      
+      <div class="settings-panel">
+        <div class="setting-item">
+          <label for="todayDate">Date:</label>
+          <input 
+            type="text" 
+            id="todayDate"
+            [(ngModel)]="todayDate" 
+            (change)="updateTodayDate()" 
+            placeholder="YYYY.MM.DD"
+          />
+        </div>
+
+        <div class="setting-item">
+          <label for="firstEntry">First Entry:</label>
+          <input 
+            type="number" 
+            id="firstEntry"
+            [(ngModel)]="firstEntry" 
+            (change)="updateFirstEntry()" 
+          />
+        </div>
+      </div>
+    </div>
+
+    <nav>
+      <ul>
+        <li><a routerLink="/manage" routerLinkActive="active">Add Institution</a></li>
+        <li><a routerLink="/view" routerLinkActive="active">View Institutions</a></li>
+        <li><a routerLink="/payments" routerLinkActive="active">Add Payments</a></li>
+      </ul>
+    </nav>
+  </header>
+  
+  <main>
+    <router-outlet></router-outlet>
+  </main>
+  
+  <footer>
+    <p>&copy; 2025 Algola Pvt Ltd</p>
+  </footer>
+</div>

@@ -1,0 +1,91 @@
+<div class="container">
+  <h2>Institution Manager</h2>
+
+  <!-- Status messages -->
+  <div *ngIf="message" [ngClass]="isError ? 'error-message' : 'success-message'">
+    {{ message }}
+  </div>
+
+  <!-- Loading indicator -->
+  <div *ngIf="loading" class="loading">
+    Loading...
+  </div>
+
+  <div class="form-section">
+    <h3>Add Institution</h3>
+    <div class="input-group">
+      <label for="institutionName">Institution Name:</label>
+      <input id="institutionName" [(ngModel)]="institutionName" placeholder="Enter institution name" />
+      <button (click)="addInstitution()">Add Institution</button>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3>Add Employees</h3>
+    
+    <!-- Institution dropdown -->
+    <div class="input-group">
+      <label for="selectInstitution">Select Institution:</label>
+      <select id="selectInstitution" [(ngModel)]="selectedInstitution">
+        <option value="">-- Select an institution --</option>
+        <option *ngFor="let institution of institutions" [value]="institution.institution_name">
+          {{ institution.institution_name }}
+        </option>
+      </select>
+    </div>
+    
+    <div class="input-group">
+      <label for="nic">NIC:</label>
+      <input id="nic" [(ngModel)]="nic" placeholder="Enter NIC" />
+    </div>
+    
+    <div class="input-group">
+      <label for="accountNo">Account No:</label>
+      <input id="accountNo" [(ngModel)]="accountNo" placeholder="Enter Account No" required />
+    </div>
+    
+    <div class="input-group">
+      <label for="employeeName">Name:</label>
+      <input id="employeeName" [(ngModel)]="employeeName" placeholder="Enter employee name" />
+    </div>
+
+    <div class="input-group">
+      <label for="capital">Capital (Optional):</label>
+      <input id="capital" [(ngModel)]="capital" type="number" placeholder="Enter capital amount" />
+    </div>
+
+    <div class="input-group">
+      <label for="interest">Interest (Optional):</label>
+      <input id="interest" [(ngModel)]="interest" type="number" placeholder="Enter interest amount" />
+    </div>
+
+    <button (click)="addEmployeeToList()">Add to List</button>
+  </div>
+
+  <div class="employee-list" *ngIf="employeeKeys.length > 0">
+    <h4>Employee List for {{ selectedInstitution }}</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>NIC</th>
+          <th>Account No</th>
+          <th>Name</th>
+          <th>Capital</th>
+          <th>Interest</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let nic of employeeKeys">
+          <td>{{ nic }}</td>
+          <td>{{ employees[nic].accountNo }}</td>
+          <td>{{ employees[nic].name }}</td>
+          <td>{{ employees[nic].capital || '-' }}</td>
+          <td>{{ employees[nic].interest || '-' }}</td>
+          <td><button class="remove-btn" (click)="removeEmployeeFromList(nic)">Remove</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <button class="submit-btn" (click)="submitEmployees()">Submit All Employees</button>
+  </div>
+</div>
