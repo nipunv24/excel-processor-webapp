@@ -25,8 +25,7 @@ frontend/libpeerconnection.log
 frontend/testem.log
 frontend/typings/
 
-# Frontend Environment files
-frontend/src/environments/environment*.ts
+
 
 # =====================
 # Backend specific
