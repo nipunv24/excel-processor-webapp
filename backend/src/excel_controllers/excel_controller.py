@@ -240,9 +240,142 @@ def submit_payment():
         return jsonify({"error": str(e)}), 500
 
 
+# def perform_batch_payment_operation(workbook, data):
+#     """
+#     Separated batch payment logic to work with atomic operations
+#     """
+#     # Extract batch data
+#     date = data.get("date")
+#     first_entry = data.get("first_entry")
+#     employees = data.get("employees", [])
+
+#     # Convert first_entry to integer
+#     fer = int(first_entry)
+    
+#     ws = workbook["Sheet1"]  # Using Sheet1 by default
+
+#     # Track the current row for each iteration
+#     current_row = fer
+#     updated_rows = []
+
+#     # Process each employee
+#     for employee in employees:
+#         # Extract employee data
+#         institute = employee.get("institution")
+#         name = employee.get("name")
+#         capital_amount = employee.get("capitalAmount")
+#         interest_amount = employee.get("interestAmount")
+#         acc_no = employee.get("accNo")
+#         bank_name = employee.get("bankName", "")
+#         description = employee.get("description", "")
+
+#         # Validate required fields for each employee
+#         if not all([institute, name, acc_no]) or (capital_amount is None and interest_amount is None):
+#             raise ValueError(f"Missing required fields for employee {name}")
+
+#         # Convert amounts to float for numeric handling if they exist
+#         capital_value = None
+#         if capital_amount:
+#             try:
+#                 capital_value = float(capital_amount)
+#             except ValueError:
+#                 raise ValueError(f"Capital amount must be a valid number for employee {name}")
+                
+#         interest_value = None
+#         if interest_amount:
+#             try:
+#                 interest_value = float(interest_amount)
+#             except ValueError:
+#                 raise ValueError(f"Interest amount must be a valid number for employee {name}")
+
+#         # Check if the cells from Bfer to Jfer are empty
+#         is_empty_row = True
+#         for col in range(2, 11):  # B to J columns (2 to 10 in 0-based indexing)
+#             cell_value = ws.cell(row=current_row, column=col).value
+#             if cell_value not in (None, ""):
+#                 is_empty_row = False
+#                 break
+
+#         # If the current row isn't empty, find three consecutive empty rows
+#         if not is_empty_row:
+#             logger.info(f"Row {current_row} is not empty, searching for three consecutive empty rows...")
+#             found = False
+            
+#             for row_num in range(current_row, ws.max_row + 100):  # +100 to ensure we scan enough rows
+#                 empty_count = 0
+#                 empty_rows = []
+                
+#                 for check_row in range(row_num, row_num + 3):  # Check for 3 consecutive empty rows
+#                     row_empty = True
+#                     for col in range(2, 11):  # B to J columns
+#                         if ws.cell(row=check_row, column=col).value not in (None, ""):
+#                             row_empty = False
+#                             break
+                    
+#                     if row_empty:
+#                         empty_count += 1
+#                         empty_rows.append(check_row)
+#                     else:
+#                         break
+                
+#                 if empty_count == 3:
+#                     # Use the second empty row
+#                     current_row = empty_rows[1]
+#                     logger.info(f"Found 3 consecutive empty rows, using row {current_row} for data entry")
+#                     found = True
+#                     break
+            
+#             if not found:
+#                 raise ValueError(f"Could not find 3 consecutive empty rows for employee {name}")
+
+#         # Add date to column A of the current row
+#         ws.cell(row=current_row, column=1).value = date
+
+#         # Update the cells with employee data
+#         ws.cell(row=current_row, column=2).value = "BS"  # Bill Number is always "BS"
+#         ws.cell(row=current_row, column=3).value = ""    # Empty Cheque No
+#         ws.cell(row=current_row, column=4).value = acc_no
+#         ws.cell(row=current_row, column=5).value = name
+#         ws.cell(row=current_row-1, column=5).value = institute
+
+#         # Set payment types
+#         ws.cell(row=current_row, column=6).value = "Capital"
+#         ws.cell(row=current_row+1, column=6).value = "Interest"
+
+#         # Handle capital amount if provided
+#         if capital_value is not None:
+#             if bank_name == "HNB":
+#                 ws.cell(row=current_row, column=9).value = capital_value
+#             elif bank_name == "Peoples Bank":
+#                 ws.cell(row=current_row, column=8).value = capital_value
+#             elif bank_name == "Cash in Hand":
+#                 ws.cell(row=current_row, column=7).value = capital_value
+
+#         # Handle interest amount if provided
+#         if interest_value is not None:
+#             if bank_name == "HNB":
+#                 ws.cell(row=current_row+1, column=9).value = interest_value
+#             elif bank_name == "Peoples Bank":
+#                 ws.cell(row=current_row+1, column=8).value = interest_value
+#             elif bank_name == "Cash in Hand":
+#                 ws.cell(row=current_row+1, column=7).value = interest_value
+
+#         # Add description if provided
+#         if description:
+#             ws.cell(row=current_row, column=13).value = description
+
+#         # Track the updated row
+#         updated_rows.append(current_row)
+
+#         # Move to the next potential row (after the interest row)
+#         current_row += 3
+
+#     return updated_rows, employees
+
+
 def perform_batch_payment_operation(workbook, data):
     """
-    Separated batch payment logic to work with atomic operations
+    Enhanced batch payment logic with robust row availability checking
     """
     # Extract batch data
     date = data.get("date")
@@ -254,12 +387,93 @@ def perform_batch_payment_operation(workbook, data):
     
     ws = workbook["Sheet1"]  # Using Sheet1 by default
 
+    # Calculate required rows for the entire batch
+    num_employees = len(employees)
+    required_rows = num_employees * 3 + 3
+    
+    logger.info(f"Batch operation: {num_employees} employees, {required_rows} rows required")
+
+    # Find the starting row (either fer if empty, or first available position)
+    starting_row = fer
+    
+    # Check if the initial row (fer) is empty
+    is_initial_row_empty = True
+    for col in range(2, 11):  # B to J columns (2 to 10 in 0-based indexing)
+        cell_value = ws.cell(row=starting_row, column=col).value
+        if cell_value not in (None, ""):
+            is_initial_row_empty = False
+            break
+
+    # If the initial row isn't empty, find three consecutive empty rows
+    if not is_initial_row_empty:
+        logger.info(f"Row {starting_row} is not empty, searching for three consecutive empty rows...")
+        found = False
+        
+        for row_num in range(starting_row, ws.max_row + 100):  # +100 to ensure we scan enough rows
+            empty_count = 0
+            empty_rows = []
+            
+            for check_row in range(row_num, row_num + 3):  # Check for 3 consecutive empty rows
+                row_empty = True
+                for col in range(2, 11):  # B to J columns
+                    if ws.cell(row=check_row, column=col).value not in (None, ""):
+                        row_empty = False
+                        break
+                
+                if row_empty:
+                    empty_count += 1
+                    empty_rows.append(check_row)
+                else:
+                    break
+            
+            if empty_count == 3:
+                # Use the second empty row as starting point
+                starting_row = empty_rows[1]
+                logger.info(f"Found 3 consecutive empty rows, using row {starting_row} as starting point")
+                found = True
+                break
+        
+        if not found:
+            raise ValueError("Could not find 3 consecutive empty rows to start the batch operation")
+
+    # Now validate that we have enough consecutive empty rows for the entire batch
+    logger.info(f"Validating {required_rows} consecutive empty rows starting from row {starting_row}")
+    
+    insufficient_rows = []
+    for row_offset in range(required_rows):
+        check_row = starting_row + row_offset
+        row_empty = True
+        
+        for col in range(2, 11):  # B to J columns
+            cell_value = ws.cell(row=check_row, column=col).value
+            if cell_value not in (None, ""):
+                row_empty = False
+                insufficient_rows.append(check_row)
+                break
+    
+    if insufficient_rows:
+        error_message = (
+            f"Insufficient empty rows for batch operation. "
+            f"Required: {required_rows} consecutive empty rows starting from row {starting_row}. "
+            f"Found non-empty data in rows: {insufficient_rows[:10]}"  # Limit to first 10 for readability
+        )
+        if len(insufficient_rows) > 10:
+            error_message += f" and {len(insufficient_rows) - 10} more rows"
+        
+        logger.error(error_message)
+        raise ValueError(error_message)
+
+    # If we reach here, we have sufficient empty rows
+    logger.info(f"Validation passed: {required_rows} consecutive empty rows available starting from row {starting_row}")
+
     # Track the current row for each iteration
-    current_row = fer
+    current_row = starting_row
     updated_rows = []
 
     # Process each employee
-    for employee in employees:
+    for idx, employee in enumerate(employees):
+        logger.info(f"Processing employee {idx + 1}/{num_employees}: {employee.get('name', 'Unknown')}")
+        
         # Extract employee data
         institute = employee.get("institution")
         name = employee.get("name")
@@ -287,46 +501,6 @@ def perform_batch_payment_operation(workbook, data):
                 interest_value = float(interest_amount)
             except ValueError:
                 raise ValueError(f"Interest amount must be a valid number for employee {name}")
-
-        # Check if the cells from Bfer to Jfer are empty
-        is_empty_row = True
-        for col in range(2, 11):  # B to J columns (2 to 10 in 0-based indexing)
-            cell_value = ws.cell(row=current_row, column=col).value
-            if cell_value not in (None, ""):
-                is_empty_row = False
-                break
-
-        # If the current row isn't empty, find three consecutive empty rows
-        if not is_empty_row:
-            logger.info(f"Row {current_row} is not empty, searching for three consecutive empty rows...")
-            found = False
-            
-            for row_num in range(current_row, ws.max_row + 100):  # +100 to ensure we scan enough rows
-                empty_count = 0
-                empty_rows = []
-                
-                for check_row in range(row_num, row_num + 3):  # Check for 3 consecutive empty rows
-                    row_empty = True
-                    for col in range(2, 11):  # B to J columns
-                        if ws.cell(row=check_row, column=col).value not in (None, ""):
-                            row_empty = False
-                            break
-                    
-                    if row_empty:
-                        empty_count += 1
-                        empty_rows.append(check_row)
-                    else:
-                        break
-                
-                if empty_count == 3:
-                    # Use the second empty row
-                    current_row = empty_rows[1]
-                    logger.info(f"Found 3 consecutive empty rows, using row {current_row} for data entry")
-                    found = True
-                    break
-            
-            if not found:
-                raise ValueError(f"Could not find 3 consecutive empty rows for employee {name}")
 
         # Add date to column A of the current row
         ws.cell(row=current_row, column=1).value = date
@@ -367,10 +541,12 @@ def perform_batch_payment_operation(workbook, data):
         # Track the updated row
         updated_rows.append(current_row)
 
-        # Move to the next potential row (after the interest row)
+        # Move to the next set of rows (each employee uses 3 rows)
         current_row += 3
 
+    logger.info(f"Batch operation completed successfully. Updated rows: {updated_rows}")
     return updated_rows, employees
+
 
 
 @app.route('/submitExcelBatchPayment', methods=['POST'])
