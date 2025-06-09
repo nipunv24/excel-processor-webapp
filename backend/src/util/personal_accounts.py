@@ -16,6 +16,52 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def find_personal_account_file(employee_name: str, employee_accountNo: str, institution_name: str) -> str:
+    """
+    Find the personal account file for an employee using a single flexible search logic.
+    
+    Searches for files that start with employee_name and end with -employee_accountNo.xlsx
+    This covers both formats:
+    - K.G.R.S.K.GUNATHILAKA-529.xlsx (exact match)
+    - K.G.R.S.K.GUNATHILAKA(ABC)-529.xlsx (with parenthetical content)
+    
+    Args:
+        employee_name (str): Name of the employee
+        employee_accountNo (str): Account number of the employee
+        institution_name (str): Name of the institution
+        
+    Returns:
+        str: Full path to the found file
+        
+    Raises:
+        FileNotFoundError: If no matching file is found
+    """
+    directory_path = f"{PERSONAL_ACCOUNT_ROOTPATH}/{institution_name}"
+    
+    # Check if directory exists
+    if not os.path.exists(directory_path):
+        raise FileNotFoundError(f"Directory not found: {directory_path}")
+    
+    # Search for files that start with employee name and end with -account_number.xlsx
+    matching_files = []
+    expected_suffix = f"-{employee_accountNo}.xlsx"
+    
+    for file in os.listdir(directory_path):
+        if file.startswith(employee_name) and file.endswith(expected_suffix):
+            matching_files.append(os.path.join(directory_path, file))
+    
+    if not matching_files:
+        raise FileNotFoundError(f"Personal account file not found for {employee_name} in {institution_name} with account number {employee_accountNo}")
+    
+    # If multiple matches found, use the first one and log a warning
+    if len(matching_files) > 1:
+        logger.warning(f"Multiple files found for {employee_name}-{employee_accountNo}: {[os.path.basename(f) for f in matching_files]}")
+        logger.warning(f"Using the first match: {os.path.basename(matching_files[0])}")
+    
+    logger.info(f"Found personal account file: {os.path.basename(matching_files[0])}")
+    return matching_files[0]
+
+
 def perform_personal_account_update(workbook, employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None):
     """
     Separated personal account update logic to work with atomic operations
@@ -90,7 +136,7 @@ def update_personal_account(employee_name: str, employee_accountNo: str, institu
     """
     Updates the personal account Excel file for a specific employee with payment information.
     Looks for 4 consecutive empty rows and uses the first one for the update.
-    Now uses atomic operations to prevent file corruption.
+    Uses atomic operations to prevent file corruption and flexible file matching.
     
     Args:
         employee_name (str): Name of the employee
@@ -105,17 +151,10 @@ def update_personal_account(employee_name: str, employee_accountNo: str, institu
     """
 
     try:
-        # Construct the file path
-        file_path = f"{PERSONAL_ACCOUNT_ROOTPATH}/{institution_name}/{employee_name}-{employee_accountNo}.xlsx"
-
-        logger.info(f"The file path of the employee is {file_path}")
+        # Use the flexible file finding function
+        file_path = find_personal_account_file(employee_name, employee_accountNo, institution_name)
         
-        # Check if file exists
-        if not os.path.exists(file_path):
-            return {
-                "success": False,
-                "error": f"Personal account file not found for {employee_name} in {institution_name} with account number {employee_accountNo}"
-            }
+        logger.info(f"The file path of the employee is {file_path}")
         
         # Perform atomic Excel operation
         with atomic_excel_operation(file_path) as workbook:
@@ -135,7 +174,8 @@ def update_personal_account(employee_name: str, employee_accountNo: str, institu
         return {
             "success": True,
             "message": success_message,
-            "row_updated": current_row
+            "row_updated": current_row,
+            "file_path": file_path
         }
         
     except ValueError as ve:
