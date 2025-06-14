@@ -11,6 +11,25 @@ CORS(app, resources={r"/*": {
     "allow_headers": ["Content-Type", "Authorization"]
 }})
 
+
+@app.route('/getInstitutions', methods=['GET'])
+def get_institutions():
+    try:
+        db = get_db()
+        institutions_collection = db["institutions"]
+        
+        # Get all institutions (without the MongoDB _id field)
+        institutions = []
+        for institution in institutions_collection.find({}, {"_id": 0}):
+            institutions.append(institution)
+            
+        return jsonify({"institutions": institutions}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+    
+
 @app.route('/addInstitution', methods=['POST'])
 def add_institution():
     try:
@@ -36,6 +55,75 @@ def add_institution():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+
+@app.route('/deleteInstitution', methods=['DELETE'])
+def delete_institution():
+    try:
+        data = request.json
+        institution_name = data.get("institution_name")
+        
+        if not institution_name:
+            return jsonify({"error": "Institution name is required"}), 400
+            
+        db = get_db()
+        institutions_collection = db["institutions"]
+        
+        # Delete the institution
+        result = institutions_collection.delete_one({"institution_name": institution_name})
+        
+        if result.deleted_count == 0:
+            return jsonify({"error": "Institution not found"}), 404
+            
+        return jsonify({"message": "Institution deleted successfully!"}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+
+
+@app.route('/editInstitution', methods=['PUT'])
+def edit_institution():
+    try:
+        data = request.json
+        old_institution_name = data.get("old_institution_name")
+        new_institution_name = data.get("new_institution_name")
+        
+        if not old_institution_name or not new_institution_name:
+            return jsonify({"error": "Both old and new institution names are required"}), 400
+            
+        db = get_db()
+        institutions_collection = db["institutions"]
+        
+        # Check if the old institution exists
+        institution = institutions_collection.find_one({"institution_name": old_institution_name})
+        
+        if not institution:
+            return jsonify({"error": "Institution not found"}), 404
+            
+        # Check if the new institution name already exists (to avoid duplicates)
+        existing_institution = institutions_collection.find_one({"institution_name": new_institution_name})
+        
+        if existing_institution and existing_institution["institution_name"] != old_institution_name:
+            return jsonify({"error": "Institution with the new name already exists"}), 409
+            
+        # Update the institution name
+        result = institutions_collection.update_one(
+            {"institution_name": old_institution_name},
+            {"$set": {"institution_name": new_institution_name}}
+        )
+        
+        if result.modified_count == 0:
+            return jsonify({"error": "Failed to update institution name"}), 500
+            
+        return jsonify({"message": "Institution name updated successfully!"}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
 
 
 
@@ -82,44 +170,6 @@ def add_employees():
 
 
 
-@app.route('/getInstitutions', methods=['GET'])
-def get_institutions():
-    try:
-        db = get_db()
-        institutions_collection = db["institutions"]
-        
-        # Get all institutions (without the MongoDB _id field)
-        institutions = []
-        for institution in institutions_collection.find({}, {"_id": 0}):
-            institutions.append(institution)
-            
-        return jsonify({"institutions": institutions}), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/deleteInstitution', methods=['DELETE'])
-def delete_institution():
-    try:
-        data = request.json
-        institution_name = data.get("institution_name")
-        
-        if not institution_name:
-            return jsonify({"error": "Institution name is required"}), 400
-            
-        db = get_db()
-        institutions_collection = db["institutions"]
-        
-        # Delete the institution
-        result = institutions_collection.delete_one({"institution_name": institution_name})
-        
-        if result.deleted_count == 0:
-            return jsonify({"error": "Institution not found"}), 404
-            
-        return jsonify({"message": "Institution deleted successfully!"}), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 @app.route('/deleteEmployee', methods=['DELETE'])
 def delete_employee():
@@ -155,6 +205,62 @@ def delete_employee():
         )
         
         return jsonify({"message": "Employee deleted successfully!"}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+
+@app.route('/editEmployee', methods=['PUT'])
+def edit_employee():
+    try:
+        data = request.json
+        institution_name = data.get("institution_name")
+        employee_id = data.get("employee_id")
+        updated_employee_data = data.get("employee_data")
+        
+        if not institution_name or not employee_id or not updated_employee_data:
+            return jsonify({"error": "Institution name, employee ID, and employee data are required"}), 400
+            
+        db = get_db()
+        institutions_collection = db["institutions"]
+        
+        # Find the institution
+        institution = institutions_collection.find_one({"institution_name": institution_name})
+        
+        if not institution:
+            return jsonify({"error": "Institution not found"}), 404
+            
+        # Find and update the employee in the employees list
+        employees = institution["employees"]
+        employee_found = False
+        
+        for i, employee in enumerate(employees):
+            if employee["id"] == employee_id:
+                # Update employee data while preserving the ID
+                employees[i] = {
+                    "id": employee_id,  # Keep the original ID
+                    "name": updated_employee_data.get("name", employee.get("name")),
+                    "accountNo": updated_employee_data.get("accountNo", employee.get("accountNo")),
+                    "capital": updated_employee_data.get("capital", employee.get("capital")),
+                    "interest": updated_employee_data.get("interest", employee.get("interest"))
+                }
+                employee_found = True
+                break
+                
+        if not employee_found:
+            return jsonify({"error": "Employee not found"}), 404
+            
+        # Update the institution with the modified employees list
+        result = institutions_collection.update_one(
+            {"institution_name": institution_name},
+            {"$set": {"employees": employees}}
+        )
+        
+        if result.modified_count == 0:
+            return jsonify({"error": "Failed to update employee data"}), 500
+            
+        return jsonify({"message": "Employee data updated successfully!"}), 200
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500

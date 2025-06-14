@@ -18,12 +18,22 @@
 
   <!-- Institutions list -->
   <div *ngIf="!loading && institutions.length > 0" class="institutions-list">
-    <div *ngFor="let institution of institutions" class="institution-card">
+    <!-- Pagination info -->
+    <div class="pagination-info">
+      Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, institutions.length) }} of {{ institutions.length }} institutions
+    </div>
+
+    <div *ngFor="let institution of paginatedInstitutions" class="institution-card">
       <div class="institution-header">
         <h3>{{ institution.institution_name }}</h3>
-        <button class="delete-btn" (click)="deleteInstitution(institution.institution_name)">
-          Delete Institution
-        </button>
+        <div class="institution-actions">
+          <button class="edit-btn" (click)="openEditInstitutionModal(institution.institution_name)">
+            Edit
+          </button>
+          <button class="delete-btn" (click)="deleteInstitution(institution.institution_name)">
+            Delete Institution
+          </button>
+        </div>
       </div>
 
       <div class="employees-section">
@@ -32,10 +42,12 @@
         <table *ngIf="institution.employees.length > 0" style="width: 100%; border-collapse: collapse;">
           <thead>
             <tr>
-              <th style="text-align: left; padding: 12px; border-bottom: 2px solid #ddd; width: 20%;">NIC</th>
-              <th style="text-align: left; padding: 12px; border-bottom: 2px solid #ddd; width: 30%;">Name</th>
-              <th style="text-align: left; padding: 12px; border-bottom: 2px solid #ddd; width: 25%;">Account No</th>
-              <th style="text-align: center; padding: 12px; border-bottom: 2px solid #ddd; width: 25%;">Action</th>
+              <th style="text-align: left; padding: 12px; border-bottom: 2px solid #ddd; width: 15%;">NIC</th>
+              <th style="text-align: left; padding: 12px; border-bottom: 2px solid #ddd; width: 25%;">Name</th>
+              <th style="text-align: left; padding: 12px; border-bottom: 2px solid #ddd; width: 20%;">Account No</th>
+              <th style="text-align: left; padding: 12px; border-bottom: 2px solid #ddd; width: 15%;">Capital</th>
+              <th style="text-align: left; padding: 12px; border-bottom: 2px solid #ddd; width: 15%;">Interest</th>
+              <th style="text-align: center; padding: 12px; border-bottom: 2px solid #ddd; width: 10%;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -43,10 +55,17 @@
               <td style="padding: 10px 12px; border-bottom: 1px solid #eee;">{{ employee.id }}</td>
               <td style="padding: 10px 12px; border-bottom: 1px solid #eee;">{{ employee.name }}</td>
               <td style="padding: 10px 12px; border-bottom: 1px solid #eee;">{{ employee.accountNo }}</td>
+              <td style="padding: 10px 12px; border-bottom: 1px solid #eee;">{{ employee['capital'] || 'N/A' }}</td>
+              <td style="padding: 10px 12px; border-bottom: 1px solid #eee;">{{ employee['interest'] || 'N/A' }}</td>
               <td style="padding: 10px 12px; border-bottom: 1px solid #eee; text-align: center;">
-                <button class="remove-btn" (click)="deleteEmployee(institution.institution_name, employee.id, employee.name)">
-                  Remove
-                </button>
+                <div class="employee-actions">
+                  <button class="edit-btn-small" (click)="openEditEmployeeModal(institution.institution_name, employee)">
+                    Edit
+                  </button>
+                  <button class="remove-btn" (click)="deleteEmployee(institution.institution_name, employee.id, employee.name)">
+                    Remove
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -56,6 +75,150 @@
           No employees added to this institution yet.
         </div>
       </div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div class="pagination-container" *ngIf="totalPages > 1">
+      <div class="pagination">
+        <!-- First Page -->
+        <button 
+          class="pagination-btn" 
+          [disabled]="currentPage === 1" 
+          (click)="goToPage(1)"
+          title="First Page">
+          ⟪
+        </button>
+        
+        <!-- Previous Page -->
+        <button 
+          class="pagination-btn" 
+          [disabled]="currentPage === 1" 
+          (click)="goToPage(currentPage - 1)"
+          title="Previous Page">
+          ⟨
+        </button>
+        
+        <!-- Page Numbers -->
+        <button 
+          *ngFor="let page of getVisiblePages()" 
+          class="pagination-btn page-number" 
+          [class.active]="page === currentPage"
+          (click)="goToPage(page)">
+          {{ page }}
+        </button>
+        
+        <!-- Next Page -->
+        <button 
+          class="pagination-btn" 
+          [disabled]="currentPage === totalPages" 
+          (click)="goToPage(currentPage + 1)"
+          title="Next Page">
+          ⟩
+        </button>
+        
+        <!-- Last Page -->
+        <button 
+          class="pagination-btn" 
+          [disabled]="currentPage === totalPages" 
+          (click)="goToPage(totalPages)"
+          title="Last Page">
+          ⟫
+        </button>
+      </div>
+      
+      <!-- Page Size Selector -->
+      <div class="page-size-selector">
+        <label for="pageSize">Show:</label>
+        <select id="pageSize" [(ngModel)]="itemsPerPage" (change)="onPageSizeChange()" class="page-size-select">
+          <option value="5">5 per page</option>
+          <option value="10">10 per page</option>
+          <option value="20">20 per page</option>
+          <option value="50">50 per page</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Institution Modal -->
+<div *ngIf="showEditInstitutionModal" class="modal-overlay" (click)="closeEditInstitutionModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Edit Institution Name</h3>
+      <button class="close-btn" (click)="closeEditInstitutionModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="institutionName">Institution Name:</label>
+        <input 
+          type="text" 
+          id="institutionName"
+          [(ngModel)]="editInstitutionData.newName" 
+          class="form-input"
+          placeholder="Enter institution name"
+        >
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="cancel-btn" (click)="closeEditInstitutionModal()">Cancel</button>
+      <button class="save-btn" (click)="saveInstitutionEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Employee Modal -->
+<div *ngIf="showEditEmployeeModal" class="modal-overlay" (click)="closeEditEmployeeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Edit Employee Details</h3>
+      <button class="close-btn" (click)="closeEditEmployeeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="employeeName">Employee Name:</label>
+        <input 
+          type="text" 
+          id="employeeName"
+          [(ngModel)]="editEmployeeData.name" 
+          class="form-input"
+          placeholder="Enter employee name"
+        >
+      </div>
+      <div class="form-group">
+        <label for="accountNo">Account Number:</label>
+        <input 
+          type="text" 
+          id="accountNo"
+          [(ngModel)]="editEmployeeData.accountNo" 
+          class="form-input"
+          placeholder="Enter account number"
+        >
+      </div>
+      <div class="form-group">
+        <label for="capital">Capital:</label>
+        <input 
+          type="number" 
+          id="capital"
+          [(ngModel)]="editEmployeeData.capital" 
+          class="form-input"
+          placeholder="Enter capital amount"
+        >
+      </div>
+      <div class="form-group">
+        <label for="interest">Interest:</label>
+        <input 
+          type="number" 
+          id="interest"
+          step="0.01"
+          [(ngModel)]="editEmployeeData.interest" 
+          class="form-input"
+          placeholder="Enter interest rate"
+        >
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="cancel-btn" (click)="closeEditEmployeeModal()">Cancel</button>
+      <button class="save-btn" (click)="saveEmployeeEdit()">Save Changes</button>
     </div>
   </div>
 </div>

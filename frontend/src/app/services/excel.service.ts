@@ -67,4 +67,16 @@ export class ExcelService {
   submitBatchPayment(batchData: any): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/submitExcelBatchPayment`, batchData, this.httpOptions);
   }
+
+  // Edit Institution API
+  editInstitution(old_institution_name: string, new_institution_name: string): Observable<any> {
+    const payload = { old_institution_name, new_institution_name };
+    return this.http.put<any>(`${this.baseUrl}/editInstitution`, payload, this.httpOptions);
+  }
+
+  // Edit Employee API
+  editEmployee(institution_name: string, employee_id: string, employee_data: EmployeeData): Observable<any> {
+    const payload = { institution_name, employee_id, employee_data };
+    return this.http.put<any>(`${this.baseUrl}/editEmployee`, payload, this.httpOptions);
+  }
 }
