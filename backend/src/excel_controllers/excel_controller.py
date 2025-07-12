@@ -4,6 +4,7 @@ from flask_cors import CORS
 import logging
 from util.personal_accounts import update_personal_account
 from util.atomic_excel_operations import atomic_excel_operation  # Import our atomic operations
+from util.trial_balance_updates import update_capital_trial_balance, update_interest_trial_balance
 import os
 from dotenv import load_dotenv
 
@@ -222,9 +223,35 @@ def submit_payment():
             interest=float(interest_amount) if interest_amount else None
         )
 
+        logger.info("Updating the interest in trial balance for employee: %s of institution: %s", employee["name"], institute)
+        update_trial_balance_interest_result = update_interest_trial_balance(
+            employee_name=employee["name"],
+            employee_accountNo=employee["accountNo"],
+            institution_name=institute,
+            date=date,
+            capital=float(capital_amount) if capital_amount else None,
+            interest=float(interest_amount) if interest_amount else None
+        )
+
+        logger.info("Updating the capital in trial balance for employee: %s of institution: %s", employee["name"], institute)
+        update_trial_balance_capital_result = update_capital_trial_balance(
+            employee_name=employee["name"],
+            employee_accountNo=employee["accountNo"],
+            institution_name=institute,
+            date=date,
+            capital=float(capital_amount) if capital_amount else None,
+            interest=float(interest_amount) if interest_amount else None
+        )
+
         if not personal_account_result["success"]:
             logger.error("Failed to update personal account: %s", personal_account_result["error"])
             # Note: We don't return here as the main Excel update was successful
+
+        if not update_trial_balance_interest_result["success"]:
+            logger.error("Failed to update trial balance interest %s", personal_account_result["error"])
+
+        if not update_trial_balance_capital_result["success"]:
+            logger.error("Failed to update trial balance capital: %s", personal_account_result["error"])
 
         # Return success message with the row that was updated
         return jsonify({
@@ -583,11 +610,48 @@ def submit_batch_payment():
                 interest=float(employee.get("interestAmount")) if employee.get("interestAmount") else None
             )
 
+            logger.info("Updating trial balance interest for employee: %s of institution: %s", 
+                       employee.get("name"), employee.get("institution"))
+            update_trial_balance_interest_result = update_interest_trial_balance(
+                employee_name=employee.get("name"),
+                employee_accountNo=employee.get("accNo"),
+                institution_name=employee.get("institution"),
+                date=date,
+                capital=float(employee.get("capitalAmount")) if employee.get("capitalAmount") else None,
+                interest=float(employee.get("interestAmount")) if employee.get("interestAmount") else None
+            )
+
+            logger.info("Updating trial balance capital for employee: %s of institution: %s", 
+                       employee.get("name"), employee.get("institution"))
+            update_trial_balance_capital_result = update_capital_trial_balance(
+                employee_name=employee.get("name"),
+                employee_accountNo=employee.get("accNo"),
+                institution_name=employee.get("institution"),
+                date=date,
+                capital=float(employee.get("capitalAmount")) if employee.get("capitalAmount") else None,
+                interest=float(employee.get("interestAmount")) if employee.get("interestAmount") else None
+            )
+
             if not personal_account_result["success"]:
                 logger.error("Failed to update personal account for %s: %s", 
                            employee.get("name"), personal_account_result["error"])
             else:
-                logger.info(personal_account_result["message"])
+                logger.info("Personal account update successful for %s: %s", 
+                           employee.get("name"), personal_account_result["message"])
+
+            if not update_trial_balance_interest_result["success"]:
+                logger.error("Failed to update trial balance interest for %s: %s", 
+                           employee.get("name"), update_trial_balance_interest_result["error"])
+            else:
+                logger.info("Trial balance interest update successful for %s: %s", 
+                           employee.get("name"), update_trial_balance_interest_result["message"])
+
+            if not update_trial_balance_capital_result["success"]:
+                logger.error("Failed to update trial balance capital for %s: %s", 
+                           employee.get("name"), update_trial_balance_capital_result["error"])
+            else:
+                logger.info("Trial balance capital update successful for %s: %s", 
+                           employee.get("name"), update_trial_balance_capital_result["message"])
 
             personal_account_results.append({
                 "employee": employee.get("name"),
