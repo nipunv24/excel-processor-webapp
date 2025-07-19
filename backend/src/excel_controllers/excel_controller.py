@@ -5,6 +5,7 @@ import logging
 from util.personal_accounts import update_personal_account
 from util.atomic_excel_operations import atomic_excel_operation  # Import our atomic operations
 from util.trial_balance_updates import update_capital_trial_balance, update_interest_trial_balance
+from util.main_ledger_update import update_main_ledger
 import os
 from dotenv import load_dotenv
 
@@ -243,15 +244,30 @@ def submit_payment():
             interest=float(interest_amount) if interest_amount else None
         )
 
+        logger.info("Updating the main ledger for employee: %s of institution: %s", employee["name"], institute)
+        update_main_ledger_result = update_main_ledger(
+            employee_name=employee["name"],
+            employee_accountNo=employee["accountNo"],
+            institution_name=institute,
+            date=date,
+            capital=float(capital_amount) if capital_amount else None,
+            interest=float(interest_amount) if interest_amount else None
+        )
+
         if not personal_account_result["success"]:
             logger.error("Failed to update personal account: %s", personal_account_result["error"])
             # Note: We don't return here as the main Excel update was successful
 
         if not update_trial_balance_interest_result["success"]:
-            logger.error("Failed to update trial balance interest %s", personal_account_result["error"])
+            logger.error("Failed to update trial balance interest: %s", update_trial_balance_interest_result["error"])
 
         if not update_trial_balance_capital_result["success"]:
-            logger.error("Failed to update trial balance capital: %s", personal_account_result["error"])
+            logger.error("Failed to update trial balance capital: %s", update_trial_balance_capital_result["error"])
+
+        if not update_main_ledger_result["success"]:
+            logger.error("Failed to update main ledger: %s", update_main_ledger_result["error"])
+        else:
+            logger.info("Main ledger update successful for %s: %s", employee["name"], update_main_ledger_result["message"])
 
         # Return success message with the row that was updated
         return jsonify({
@@ -632,6 +648,17 @@ def submit_batch_payment():
                 interest=float(employee.get("interestAmount")) if employee.get("interestAmount") else None
             )
 
+            logger.info("Updating main ledger for employee: %s of institution: %s", 
+                       employee.get("name"), employee.get("institution"))
+            update_main_ledger_result = update_main_ledger(
+                employee_name=employee.get("name"),
+                employee_accountNo=employee.get("accNo"),
+                institution_name=employee.get("institution"),
+                date=date,
+                capital=float(employee.get("capitalAmount")) if employee.get("capitalAmount") else None,
+                interest=float(employee.get("interestAmount")) if employee.get("interestAmount") else None
+            )
+
             if not personal_account_result["success"]:
                 logger.error("Failed to update personal account for %s: %s", 
                            employee.get("name"), personal_account_result["error"])
@@ -652,6 +679,13 @@ def submit_batch_payment():
             else:
                 logger.info("Trial balance capital update successful for %s: %s", 
                            employee.get("name"), update_trial_balance_capital_result["message"])
+                
+            if not update_main_ledger_result["success"]:
+                logger.error("Failed to update main ledger for %s: %s", 
+                           employee.get("name"), update_main_ledger_result["error"])
+            else:
+                logger.info("Main ledger update successful for %s: %s", 
+                           employee.get("name"), update_main_ledger_result["message"])
 
             personal_account_results.append({
                 "employee": employee.get("name"),
