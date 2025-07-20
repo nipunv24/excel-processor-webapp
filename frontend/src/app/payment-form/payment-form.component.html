@@ -88,7 +88,7 @@
     </div>
 
     <div class="form-actions">
-      <button type="button" (click)="submitPayment()" [disabled]="!selectedInstitution || !selectedEmployee || !cheqNo || !accNo || (!capitalAmount && !interestAmount) || loading">
+      <button type="button" (click)="submitPayment()" class="submit-payment-btn"  [disabled]="!selectedInstitution || !selectedEmployee || !cheqNo || !accNo || (!capitalAmount && !interestAmount) || loading">
         Submit Payment
       </button>
       <button type="button" (click)="resetForm()" [disabled]="loading" class="reset-btn">
@@ -187,7 +187,7 @@
       </table>
 
       <div class="form-actions">
-        <button type="button" (click)="submitBatchPayment()" [disabled]="batchEmployees.length === 0 || loading">
+        <button type="button" class="submit-payment-btn" (click)="submitBatchPayment()" [disabled]="batchEmployees.length === 0 || loading">
           Submit Batch Payment
         </button>
         <button type="button" (click)="resetBatchForm()" [disabled]="loading" class="reset-btn">

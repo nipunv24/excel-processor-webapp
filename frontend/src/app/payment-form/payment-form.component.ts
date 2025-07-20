@@ -273,12 +273,12 @@ export class PaymentFormComponent implements OnInit {
   private showSuccess(msg: string): void {
     this.message = msg;
     this.isError = false;
-    setTimeout(() => this.message = '', 5000);
+    setTimeout(() => this.message = '', 15000);
   }
 
   private showError(msg: string): void {
     this.message = msg;
     this.isError = true;
-    setTimeout(() => this.message = '', 5000);
+    setTimeout(() => this.message = '', 15000);
   }
 }

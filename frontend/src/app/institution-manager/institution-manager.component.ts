@@ -1,4 +1,3 @@
-// src/app/institution-manager/institution-manager.component.ts
 import { Component, OnInit } from '@angular/core';
 import { ExcelService } from '../services/excel.service';
 
@@ -25,7 +24,6 @@ export class InstitutionManagerComponent implements OnInit {
   institutions: Institution[] = [];
   loading: boolean = false;
   
-  // Success/error message handling
   message: string = '';
   isError: boolean = false;
 
@@ -58,8 +56,8 @@ export class InstitutionManagerComponent implements OnInit {
     this.excelService.addInstitution(this.institutionName).subscribe({
       next: (res) => {
         this.showSuccess(res.message || 'Institution added successfully!');
-        this.institutionName = ''; // Clear the input field
-        this.loadInstitutions(); // Reload institutions to update dropdown
+        this.institutionName = ''; 
+        this.loadInstitutions(); 
       },
       error: (err) => {
         this.showError(err.error?.error || 'Failed to add institution');
@@ -78,7 +76,6 @@ export class InstitutionManagerComponent implements OnInit {
       return;
     }
 
-    // Check if this NIC already exists in the list
     if (this.employees[this.nic]) {
       this.showError('An employee with this NIC already exists in the list');
       return;
@@ -96,7 +93,7 @@ export class InstitutionManagerComponent implements OnInit {
     this.employeeName = '';
     this.capital = null;
     this.interest = null;
-    this.message = ''; // Clear any previous messages
+    this.message = ''; 
   }
 
   removeEmployeeFromList(nic: string) {
@@ -119,7 +116,7 @@ export class InstitutionManagerComponent implements OnInit {
     this.excelService.addEmployees(this.selectedInstitution, this.employees).subscribe({
       next: (res) => {
         this.showSuccess(res.message || 'Employees added successfully!');
-        this.employees = {}; // Reset after success
+        this.employees = {}; 
       },
       error: (err) => {
         this.showError(err.error?.error || 'Failed to add employees');
@@ -134,14 +131,12 @@ export class InstitutionManagerComponent implements OnInit {
   private showSuccess(msg: string) {
     this.message = msg;
     this.isError = false;
-    // Auto-hide the message after 5 seconds
-    setTimeout(() => this.message = '', 5000);
+    setTimeout(() => this.message = '', 15000);
   }
 
   private showError(msg: string) {
     this.message = msg;
     this.isError = true;
-    // Auto-hide the message after 5 seconds
-    setTimeout(() => this.message = '', 5000);
+    setTimeout(() => this.message = '', 15000);
   }
 }

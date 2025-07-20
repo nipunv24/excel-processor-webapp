@@ -162,13 +162,14 @@
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 }
 
 .edit-btn {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, #5580a5 0%, #11a7ae 100%);
   color: white;
   box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
 }
@@ -218,7 +219,7 @@ table {
 }
 
 table th {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #667eea, #5e5fa2);
   color: white;
   padding: 16px 12px;
   text-align: left;
@@ -258,11 +259,12 @@ table tr:last-child td {
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   transition: all 0.2s ease;
 }
 
 .edit-btn-small {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, #4facfe 0%, #027aae 100%);
   color: white;
 }
 

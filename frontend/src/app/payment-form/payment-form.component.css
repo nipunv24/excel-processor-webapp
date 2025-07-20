@@ -248,7 +248,7 @@ button {
 }
 
 button:not(.reset-btn):not(.remove-btn):not(.tab-navigation button) {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, #5580a5 0%, #11a7ae 100%);;
   color: white;
   box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
 }
@@ -259,7 +259,27 @@ button:not(.reset-btn):not(.remove-btn):not(.tab-navigation button):hover:not([d
 }
 
 button[disabled] {
-  opacity: 0.6;
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+button.submit-payment-btn {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4) !important;
+}
+
+button.submit-payment-btn:hover:not([disabled]) {
+  background: linear-gradient(135deg, #218838 0%, #1ea97e 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(40, 167, 69, 0.6) !important;
+}
+
+button.submit-payment-btn[disabled] {
+  background: linear-gradient(135deg, #6c757d 0%, #6c757d 100%) !important;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none !important;
   box-shadow: none !important;
@@ -417,7 +437,7 @@ table {
 }
 
 table th {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #667eea, #5e5fa2);
   color: white;
   padding: 16px 12px;
   text-align: left;
