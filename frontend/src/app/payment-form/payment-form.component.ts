@@ -165,6 +165,8 @@ export class PaymentFormComponent implements OnInit {
     const columnNameRow = this.lineNumberService.getColumnNameRow();
     const firstEntry = this.lineNumberService.getFirstEntry();
     const date = this.lineNumberService.getTodayDate();
+    const ledger_debit_column = this.lineNumberService.getLedgerDebitColumn();
+    const ledger_interest_column = this.lineNumberService.getLedgerInterestColumn();
 
     const paymentData = {
       institute: this.selectedInstitution,
@@ -178,7 +180,9 @@ export class PaymentFormComponent implements OnInit {
       description: this.description,
       columnNameRow: columnNameRow,
       firstEntry: firstEntry,
-      date: date
+      date: date,
+      ledger_debit_column: ledger_debit_column,
+      ledger_interest_column: ledger_interest_column
     };
 
     this.loading = true;
@@ -214,12 +218,16 @@ export class PaymentFormComponent implements OnInit {
     const columnNameRow = this.lineNumberService.getColumnNameRow();
     const firstEntry = this.lineNumberService.getFirstEntry();
     const date = this.lineNumberService.getTodayDate();
+    const ledger_debit_column = this.lineNumberService.getLedgerDebitColumn();
+    const ledger_interest_column = this.lineNumberService.getLedgerInterestColumn();
 
     // Format the batch data according to the expected structure
     const batchData = {
       date: date,
       first_entry: firstEntry,
       columnNameRow: columnNameRow,
+      ledger_debit_column: ledger_debit_column,
+      ledger_interest_column: ledger_interest_column,
       employees: this.batchEmployees.map(emp => ({
         id: emp.id,
         name: emp.name,

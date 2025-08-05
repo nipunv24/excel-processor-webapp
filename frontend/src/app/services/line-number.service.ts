@@ -18,6 +18,14 @@ export class LineNumberService {
   private todayDateSubject = new BehaviorSubject<string>(''); // Default: empty string
   todayDate$ = this.todayDateSubject.asObservable();
 
+  private ledgerDebitColumnSubject = new BehaviorSubject<string>(''); // Default: empty string
+  ledgerDebitColumn$ = this.ledgerDebitColumnSubject.asObservable();
+
+  private ledgerInterestColumnSubject = new BehaviorSubject<string>(''); // Default: empty string
+  ledgerInterestColumn$ = this.ledgerInterestColumnSubject.asObservable();
+
+  
+
   setColumnNameRow(value: number): void {
     this.columnNameRowSubject.next(value);
   }
@@ -41,4 +49,21 @@ export class LineNumberService {
   getTodayDate(): string { // Returns string now
     return this.todayDateSubject.getValue();
   }
+
+  setLedgerDebitColumn(value: string): void {
+    this.ledgerDebitColumnSubject.next(value);
+  }
+
+  getLedgerDebitColumn(): string {
+    return this.ledgerDebitColumnSubject.getValue();
+  }   
+
+  setLedgerInterestColumn(value: string): void {
+    this.ledgerInterestColumnSubject.next(value);
+  } 
+
+  getLedgerInterestColumn(): string {
+    return this.ledgerInterestColumnSubject.getValue();
+  } 
+  
 }

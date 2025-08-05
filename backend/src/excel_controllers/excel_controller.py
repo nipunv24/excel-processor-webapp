@@ -192,6 +192,8 @@ def submit_payment():
         acc_no = data.get("accNo")
         date = data.get("date")
         description = data.get("description")
+        ledger_debit_column = data.get("ledger_debit_column")
+        ledger_interest_column = data.get("ledger_interest_column")
         
         # Validate required fields
         if not all([institute, employee, cheq_no, acc_no, date]) or (capital_amount is None and interest_amount is None):
@@ -239,6 +241,8 @@ def submit_payment():
             employee_accountNo=employee["accountNo"],
             institution_name=institute,
             date=date,
+            ledger_debit_column=ledger_debit_column,
+            ledger_interest_column=ledger_interest_column,
             capital=float(capital_amount) if capital_amount else None,
             interest=float(interest_amount) if interest_amount else None
         )
@@ -412,6 +416,8 @@ def perform_batch_payment_operation(workbook, data):
     # Extract batch data
     date = data.get("date")
     first_entry = data.get("first_entry")
+    ledger_debit_column = data.get("ledger_debit_column")
+    ledger_interest_column = data.get("ledger_interest_column")
     employees = data.get("employees", [])
 
     # Convert first_entry to integer
@@ -591,6 +597,8 @@ def submit_batch_payment():
         date = data.get("date")
         first_entry = data.get("first_entry")
         employees = data.get("employees", [])
+        ledger_debit_column = data.get("ledger_debit_column")
+        ledger_interest_column = data.get("ledger_interest_column")
 
         # Validate required fields
         if not all([date, first_entry, employees]):
@@ -612,7 +620,8 @@ def submit_batch_payment():
                 institution_name=employee.get("institution"),
                 date=date,
                 capital=float(employee.get("capitalAmount")) if employee.get("capitalAmount") else None,
-                interest=float(employee.get("interestAmount")) if employee.get("interestAmount") else None
+                interest=float(employee.get("interestAmount")) if employee.get("interestAmount") else None,
+                description=employee.get("description")
             )
 
             logger.info("Updating trial balance interest for employee: %s of institution: %s", 
@@ -644,6 +653,8 @@ def submit_batch_payment():
                 employee_accountNo=employee.get("accNo"),
                 institution_name=employee.get("institution"),
                 date=date,
+                ledger_debit_column=ledger_debit_column,
+                ledger_interest_column=ledger_interest_column,
                 capital=float(employee.get("capitalAmount")) if employee.get("capitalAmount") else None,
                 interest=float(employee.get("interestAmount")) if employee.get("interestAmount") else None
             )

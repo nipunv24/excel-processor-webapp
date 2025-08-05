@@ -13,6 +13,8 @@ export class AppComponent {
   columnNameRow: number = 0;
   firstEntry: number = 0;
   todayDate: string = '';
+  ledgerDebitColumn: string = '';
+  ledgerInterestColumn: string = '';
 
   constructor(private lineNumberService: LineNumberService) {}
 
@@ -27,4 +29,13 @@ export class AppComponent {
   updateTodayDate(): void {
     this.lineNumberService.setTodayDate(this.todayDate);
   }
+
+  updateLedgerDebitColumn(): void { 
+    this.lineNumberService.setLedgerDebitColumn(this.ledgerDebitColumn);
+  }
+
+  updateLedgerInterestColumn(): void {
+    this.lineNumberService.setLedgerInterestColumn(this.ledgerInterestColumn);
+  } 
+  
 }

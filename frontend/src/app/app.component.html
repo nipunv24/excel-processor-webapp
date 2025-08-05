@@ -24,6 +24,28 @@
             (change)="updateFirstEntry()" 
           />
         </div>
+
+        <div class="setting-item">
+          <label for="ledgerDebitColumn">Debit Col:</label>
+          <input 
+            type="text" 
+            id="ledgerDebitColumn"
+            [(ngModel)]="ledgerDebitColumn" 
+            (change)="updateLedgerDebitColumn()" 
+            placeholder="CA"
+          />
+        </div>
+
+        <div class="setting-item">
+          <label for="ledgerInterestColumn">Interest Col:</label>
+          <input 
+            type="text" 
+            id="ledgerInterestColumn"
+            [(ngModel)]="ledgerInterestColumn" 
+            (change)="updateLedgerInterestColumn()" 
+            placeholder="CB"
+          />
+        </div>
       </div>
     </div>
 

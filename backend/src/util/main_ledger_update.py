@@ -17,7 +17,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def perform_main_ledger_update(workbook, employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None):
+def perform_main_ledger_update(workbook, employee_name: str, employee_accountNo: str, institution_name: str, date: str, ledger_interest_column: str, ledger_debit_column: str, capital: float = None, interest: float = None):
     logger.info(f"Starting main ledger update for employee: {employee_name}, institution: {institution_name}")
     logger.info(f"Parameters - capital: {capital}, interest: {interest}, date: {date}")
     
@@ -31,16 +31,16 @@ def perform_main_ledger_update(workbook, employee_name: str, employee_accountNo:
     
     logger.info("Converting column letters to column numbers")
     try:
-        if CURRENT_MONTH_LEDGER_INTEREST_COLUMN:
+        if ledger_interest_column:
             from openpyxl.utils import column_index_from_string
-            interest_col_num = column_index_from_string(CURRENT_MONTH_LEDGER_INTEREST_COLUMN)
-            logger.info(f"Interest column '{CURRENT_MONTH_LEDGER_INTEREST_COLUMN}' converted to column number: {interest_col_num}")
+            interest_col_num = column_index_from_string(ledger_interest_column)
+            logger.info(f"Interest column '{ledger_interest_column}' converted to column number: {interest_col_num}")
         else:
             raise ValueError("CURRENT_MONTH_LEDGER_INTEREST_COLUMN environment variable not set")
             
-        if CURRENT_MONTH_LEDGER_DEBIT_COLUMN:
-            debit_col_num = column_index_from_string(CURRENT_MONTH_LEDGER_DEBIT_COLUMN)
-            logger.info(f"Debit column '{CURRENT_MONTH_LEDGER_DEBIT_COLUMN}' converted to column number: {debit_col_num}")
+        if ledger_debit_column:
+            debit_col_num = column_index_from_string(ledger_debit_column)
+            logger.info(f"Debit column '{ledger_debit_column}' converted to column number: {debit_col_num}")
         else:
             raise ValueError("CURRENT_MONTH_LEDGER_DEBIT_COLUMN environment variable not set")
     except Exception as e:
@@ -172,12 +172,14 @@ def perform_main_ledger_update(workbook, employee_name: str, employee_accountNo:
     }
 
 
-def update_main_ledger(employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None) -> dict:
+def update_main_ledger(employee_name: str, employee_accountNo: str, institution_name: str, date: str, ledger_debit_column: str , ledger_interest_column: str ,capital: float = None, interest: float = None) -> dict:
     logger.info("=== STARTING MAIN LEDGER UPDATE ===")
     logger.info(f"Employee: {employee_name}")
     logger.info(f"Institution: {institution_name}")
     logger.info(f"Account No: {employee_accountNo}")
     logger.info(f"Date: {date}")
+    logger.info(f"Ledger Debit Column: {ledger_debit_column}")
+    logger.info(f"Ledger Interest Column: {ledger_interest_column}")
     logger.info(f"Capital: {capital}")
     logger.info(f"Interest: {interest}")
     
@@ -189,17 +191,29 @@ def update_main_ledger(employee_name: str, employee_accountNo: str, institution_
         else:
             logger.info(f"Main ledger file path: {MAIN_LEDGER_FILE}")
         
-        if not CURRENT_MONTH_LEDGER_INTEREST_COLUMN:
-            logger.error("CURRENT_MONTH_LEDGER_INTEREST_COLUMN environment variable not set")
-            raise ValueError("CURRENT_MONTH_LEDGER_INTEREST_COLUMN environment variable not set")
-        else:
-            logger.info(f"Interest column: {CURRENT_MONTH_LEDGER_INTEREST_COLUMN}")
+        # if not CURRENT_MONTH_LEDGER_INTEREST_COLUMN:
+        #     logger.error("CURRENT_MONTH_LEDGER_INTEREST_COLUMN environment variable not set")
+        #     raise ValueError("CURRENT_MONTH_LEDGER_INTEREST_COLUMN environment variable not set")
+        # else:
+        #     logger.info(f"Interest column: {CURRENT_MONTH_LEDGER_INTEREST_COLUMN}")
         
-        if not CURRENT_MONTH_LEDGER_DEBIT_COLUMN:
-            logger.error("CURRENT_MONTH_LEDGER_DEBIT_COLUMN environment variable not set")
-            raise ValueError("CURRENT_MONTH_LEDGER_DEBIT_COLUMN environment variable not set")
+        # if not CURRENT_MONTH_LEDGER_DEBIT_COLUMN:
+        #     logger.error("CURRENT_MONTH_LEDGER_DEBIT_COLUMN environment variable not set")
+        #     raise ValueError("CURRENT_MONTH_LEDGER_DEBIT_COLUMN environment variable not set")
+        # else:
+        #     logger.info(f"Debit column: {CURRENT_MONTH_LEDGER_DEBIT_COLUMN}")
+
+        if not ledger_interest_column:
+            logger.error("Ledger interest column not provided")
+            raise ValueError("Ledger interest column not provided")
         else:
-            logger.info(f"Debit column: {CURRENT_MONTH_LEDGER_DEBIT_COLUMN}")
+            logger.info(f"Interest column: {ledger_interest_column}")
+        
+        if not ledger_debit_column:
+            logger.error("Ledger debit column not provided")
+            raise ValueError("Ledger debit column not provided")
+        else:
+            logger.info(f"Debit column: {ledger_debit_column}")
         
         logger.info("Checking if main ledger file exists...")
         if not os.path.exists(MAIN_LEDGER_FILE):
@@ -218,6 +232,8 @@ def update_main_ledger(employee_name: str, employee_accountNo: str, institution_
                 employee_accountNo, 
                 institution_name, 
                 date, 
+                ledger_interest_column, 
+                ledger_debit_column,
                 capital, 
                 interest
             )
