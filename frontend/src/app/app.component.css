@@ -128,7 +128,7 @@ nav a.active {
 main {
   flex: 1;
   padding: 20px;
-  background-color: #f8f9fa;
+  background: linear-gradient(135deg, #f4edfa 0%, #bf96f8 100%);
 }
 
 footer {
