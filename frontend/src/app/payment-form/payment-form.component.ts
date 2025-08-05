@@ -48,7 +48,7 @@ export class PaymentFormComponent implements OnInit {
   // Batch Payment Properties
   activeTab: 'individual' | 'batch' = 'individual';
   selectedBatchInstitution: string = '';
-  selectedEmployees: Set<string> = new Set(); // Store selected employee IDs
+  selectedEmployees: Set<string> = new Set(); // Store selected employee unique keys
   batchBankName: string = '';
   batchDescription: string = '';
   batchEmployees: BatchEmployee[] = [];
@@ -104,20 +104,55 @@ export class PaymentFormComponent implements OnInit {
     this.selectedEmployees.clear();
   }
 
+  // Generate unique key for each employee to avoid conflicts
+  getEmployeeUniqueKey(employee: Employee): string {
+    return `${employee.id}_${employee.accountNo}`;
+  }
+
   isEmployeeSelected(employee: Employee): boolean {
-    return this.selectedEmployees.has(employee.id);
+    return this.selectedEmployees.has(this.getEmployeeUniqueKey(employee));
   }
 
   toggleEmployeeSelection(employee: Employee): void {
-    if (this.selectedEmployees.has(employee.id)) {
-      this.selectedEmployees.delete(employee.id);
+    const uniqueKey = this.getEmployeeUniqueKey(employee);
+    if (this.selectedEmployees.has(uniqueKey)) {
+      this.selectedEmployees.delete(uniqueKey);
     } else {
-      this.selectedEmployees.add(employee.id);
+      this.selectedEmployees.add(uniqueKey);
     }
   }
 
   hasSelectedEmployees(): boolean {
     return this.selectedEmployees.size > 0;
+  }
+
+  selectAllEmployees(): void {
+    const employees = this.getEmployeesForInstitution();
+    employees.forEach(employee => {
+      const uniqueKey = this.getEmployeeUniqueKey(employee);
+      this.selectedEmployees.add(uniqueKey);
+    });
+  }
+
+  deselectAllEmployees(): void {
+    this.selectedEmployees.clear();
+  }
+
+  toggleSelectAll(event: any): void {
+  if (event.target.checked) {
+    this.selectAllEmployees();
+  } else {
+    this.deselectAllEmployees();
+  }
+}
+
+  areAllEmployeesSelected(): boolean {
+    const employees = this.getEmployeesForInstitution();
+    if (employees.length === 0) return false;
+    
+    return employees.every(employee => 
+      this.selectedEmployees.has(this.getEmployeeUniqueKey(employee))
+    );
   }
 
   addSelectedEmployeesToBatch(): void {
@@ -131,7 +166,8 @@ export class PaymentFormComponent implements OnInit {
 
     // Add each selected employee to the batch
     institution.employees.forEach(employee => {
-      if (this.selectedEmployees.has(employee.id)) {
+      const uniqueKey = this.getEmployeeUniqueKey(employee);
+      if (this.selectedEmployees.has(uniqueKey)) {
         const batchEmployee: BatchEmployee = {
           id: this.batchCounter++,
           name: employee.name,

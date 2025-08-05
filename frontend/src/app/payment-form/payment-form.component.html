@@ -55,7 +55,7 @@
         [disabled]="!selectedInstitution || loading">
         <option [ngValue]="null">-- Select Employee --</option>
         <option *ngFor="let employee of getEmployeesForInstitution()" [ngValue]="employee">
-          {{ employee.name }} ({{ employee.id }})
+          {{ employee.name }} ({{ employee.id }}) - Acc: {{ employee.accountNo }}
         </option>
       </select>
     </div>
@@ -114,16 +114,25 @@
 
       <!-- Employee Selection with Checkboxes -->
       <div class="employee-selection" *ngIf="selectedBatchInstitution">
-        <h4>Select Employees</h4>
+        <div class="employee-header">
+          <div class="select-all-container">
+            <input type="checkbox" 
+                   id="selectAllCheckbox"
+                   [checked]="areAllEmployeesSelected()"
+                   [disabled]="getEmployeesForInstitution().length === 0"
+                   (change)="toggleSelectAll($event)">
+            <label for="selectAllCheckbox" class="select-all-label">Select All</label>
+          </div>
+        </div>
         <div class="employee-list">
           <div class="employee-item" *ngFor="let employee of getEmployeesForInstitution()">
             <div class="employee-info">
               <input type="checkbox" 
-                     [id]="'employee-' + employee.id"
+                     [id]="'employee-' + getEmployeeUniqueKey(employee)"
                      [checked]="isEmployeeSelected(employee)"
                      (change)="toggleEmployeeSelection(employee)">
-              <label [for]="'employee-' + employee.id">
-                {{ employee.name }} ({{ employee.id }})
+              <label [for]="'employee-' + getEmployeeUniqueKey(employee)">
+                {{ employee.name }} ({{ employee.id }}) - Acc: {{ employee.accountNo }}
               </label>
             </div>
             <div class="employee-details" *ngIf="employee.capital !== null || employee.interest !== null">

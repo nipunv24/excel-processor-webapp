@@ -329,6 +329,51 @@ button.submit-payment-btn[disabled] {
   margin: 24px 0;
 }
 
+/* Employee Header with Select All Checkbox */
+.employee-header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e1e8ed;
+}
+
+.select-all-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.select-all-container input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #667eea;
+  border-radius: 4px;
+}
+
+.select-all-container input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.select-all-label {
+  margin: 0;
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 15px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.select-all-container input[type="checkbox"]:disabled + .select-all-label {
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
 .employee-list {
   max-height: 350px;
   overflow-y: auto;
@@ -569,13 +614,21 @@ table td input:focus {
     font-size: 13px;
   }
   
-  table th,
+  .table th,
   table td {
     padding: 10px 8px;
   }
   
   .batch-list {
     padding: 20px;
+  }
+  
+  .select-all-container {
+    padding: 10px 12px;
+  }
+  
+  .select-all-label {
+    font-size: 14px;
   }
 }
 
@@ -608,6 +661,14 @@ table td input:focus {
   
   .employee-list {
     max-height: 250px;
+  }
+  
+  .select-all-container {
+    padding: 8px 10px;
+  }
+  
+  .select-all-label {
+    font-size: 13px;
   }
 }
 
