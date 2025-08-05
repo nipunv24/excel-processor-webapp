@@ -79,6 +79,7 @@ def perform_main_ledger_update(workbook, employee_name: str, employee_accountNo:
     
     for row in range(search_start_row, search_end_row):
         cell_value = ws.cell(row=row, column=12).value
+        cell_value_accountNo = ws.cell(row=row, column=18).value  
         logger.debug(f"Row {row}, Column L value: '{cell_value}'")
         
         if cell_value in (None, ""):
@@ -89,7 +90,8 @@ def perform_main_ledger_update(workbook, employee_name: str, employee_accountNo:
                 break
         else:
             empty_count = 0
-            cell_value_str = str(cell_value).strip()
+            cell_value_str = str(cell_value).strip() 
+            cell_value_accountNo_str = str(cell_value_accountNo).strip() 
             logger.debug(f"Non-empty cell at row {row}: '{cell_value_str}'")
             
             # if not any(char.islower() for char in cell_value_str.replace(' ', '')):
@@ -97,11 +99,13 @@ def perform_main_ledger_update(workbook, employee_name: str, employee_accountNo:
             #     break
             
             employee_name_clean = employee_name.strip()
-            logger.debug(f"Comparing employee: '{cell_value_str.lower()}' with '{employee_name_clean.lower()}'")
+            employee_accountNo_clean = employee_accountNo.strip()   
+            logger.debug(f"Comparing employee name: '{cell_value_str.lower()}' with '{employee_name_clean.lower()}'")
+            logger.debug(f"Comparing employee account number: '{cell_value_accountNo_str.lower()}' with '{employee_accountNo_clean.lower()}'")
             
-            if cell_value_str.lower() == employee_name_clean.lower():
+            if cell_value_str.lower() == employee_name_clean.lower() and cell_value_accountNo_str.lower() == employee_accountNo_clean.lower():
                 employee_row = row
-                logger.info(f"FOUND employee '{employee_name}' at row {row}")
+                logger.info(f"FOUND employee '{employee_name}' with employee account number '{employee_accountNo}' at row {row}")
                 break
     
     if employee_row is None:

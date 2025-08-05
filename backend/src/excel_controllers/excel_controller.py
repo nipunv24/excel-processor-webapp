@@ -128,64 +128,51 @@ def perform_payment_operation(workbook, data):
         if not found:
             raise ValueError("Could not find 3 consecutive empty rows for data entry")
     
-    # Add date to column A of the current row
+   
     ws.cell(row=current_row, column=1).value = date
     
-    # Now we have our current_row (either fer or a new empty row)
-    # 1. Update the cell B with Bill Number or "BS"
     ws.cell(row=current_row, column=2).value = bill_no if bill_no else "BS"
     
-    # 2. Update the cell C with Cheq No
     ws.cell(row=current_row, column=3).value = cheq_no
-    
-    # 3. Update the cell D with Acc No
+
     ws.cell(row=current_row, column=4).value = acc_no
-    
-    # 4. Update the cell E with employee name
+
     ws.cell(row=current_row, column=5).value = employee["name"]
-    
-    # 5. Update the cell E in previous row with institute
+
     ws.cell(row=current_row-1, column=5).value = institute
-    
-    # Always update cell F in current row with "Capital"
+
     ws.cell(row=current_row, column=6).value = "Capital"
-    
-    # Always update cell F in next row with "Interest"
+
     ws.cell(row=current_row+1, column=6).value = "Interest"
-    
-    # Handle capital amount if provided
+
     if capital_value is not None:
-        # Determine which column to update based on bank name
         if bank_name == "HNB":
-            cell = ws.cell(row=current_row, column=9)  # Column I
+            cell = ws.cell(row=current_row, column=9) 
             cell.value = capital_value
             
         elif bank_name == "Peoples Bank":
-            cell = ws.cell(row=current_row, column=8)  # Column H
+            cell = ws.cell(row=current_row, column=8)  
             cell.value = capital_value
           
         elif bank_name == "Cash in Hand":
-            cell = ws.cell(row=current_row, column=7)  # Column G
+            cell = ws.cell(row=current_row, column=7) 
             cell.value = capital_value
     
-    # Handle interest amount if provided
     if interest_value is not None:
-        # Determine which column to update based on bank name
         if bank_name == "HNB":
-            cell = ws.cell(row=current_row+1, column=9)  # Column I in next row
+            cell = ws.cell(row=current_row+1, column=9)  
             cell.value = interest_value
            
         elif bank_name == "Peoples Bank":
-            cell = ws.cell(row=current_row+1, column=8)  # Column H in next row
+            cell = ws.cell(row=current_row+1, column=8)  
             cell.value = interest_value
             
         elif bank_name == "Cash in Hand":
-            cell = ws.cell(row=current_row+1, column=7)  # Column G in next row
+            cell = ws.cell(row=current_row+1, column=7)  
             cell.value = interest_value
-    
-    # 8. Update the cell M with Description
+
     if description:
-        ws.cell(row=current_row, column=13).value = description  # Column M
+        ws.cell(row=current_row, column=13).value = description  
     
     return current_row
 
@@ -204,6 +191,7 @@ def submit_payment():
         cheq_no = data.get("cheqNo")
         acc_no = data.get("accNo")
         date = data.get("date")
+        description = data.get("description")
         
         # Validate required fields
         if not all([institute, employee, cheq_no, acc_no, date]) or (capital_amount is None and interest_amount is None):
@@ -221,7 +209,8 @@ def submit_payment():
             institution_name=institute,
             date=date,
             capital=float(capital_amount) if capital_amount else None,
-            interest=float(interest_amount) if interest_amount else None
+            interest=float(interest_amount) if interest_amount else None,
+            description=description
         )
 
         logger.info("Updating the interest in trial balance for employee: %s of institution: %s", employee["name"], institute)

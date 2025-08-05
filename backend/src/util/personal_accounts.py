@@ -23,12 +23,10 @@ def find_personal_account_file(employee_name: str, employee_accountNo: str, inst
     """
     Find the personal account file for an employee using a single flexible search logic.
     
-    Searches for files that start with employee_name and end with -employee_accountNo.xlsx or -employee_accountNo.xls
+    Searches for files that match employee_name.xlsx or employee_name.xls
     This covers formats like:
-    - K.G.R.S.K.GUNATHILAKA-529.xlsx (exact match)
-    - K.G.R.S.K.GUNATHILAKA(ABC)-529.xlsx (with parenthetical content)
-    - K.G.R.S.K.GUNATHILAKA-529.xls (Excel 97-2003 format)
-    - K.G.R.S.K.GUNATHILAKA(ABC)-529.xls (Excel 97-2003 with parenthetical content)
+    - K.G.R.S.K.GUNATHILAKA.xlsx (exact match)
+    - K.G.R.S.K.GUNATHILAKA.xls (Excel 97-2003 format)
     
     Args:
         employee_name (str): Name of the employee
@@ -47,21 +45,17 @@ def find_personal_account_file(employee_name: str, employee_accountNo: str, inst
     if not os.path.exists(directory_path):
         raise FileNotFoundError(f"Directory not found: {directory_path}")
     
-    # Search for files that start with employee name and end with -account_number.xlsx or .xls
+    # Search for files that match employee_name.xlsx or employee_name.xls
     matching_files = []
-    expected_suffixes = [f"-{employee_accountNo}.xlsx", f"-{employee_accountNo}.xls"]
+    expected_filenames = [f"{employee_name}.xlsx", f"{employee_name}.xls"]
     
     for file in os.listdir(directory_path):
-        if file.startswith(employee_name):
-            # Check if file ends with any of the expected suffixes
-            for suffix in expected_suffixes:
-                if file.endswith(suffix):
-                    matching_files.append(os.path.join(directory_path, file))
-                    logger.info(f"Found matching file: {file}")
-                    break
+        if file in expected_filenames:
+            matching_files.append(os.path.join(directory_path, file))
+            logger.info(f"Found matching file: {file}")
     
     if not matching_files:
-        raise FileNotFoundError(f"Personal account file not found for {employee_name} in {institution_name} with account number {employee_accountNo}. Looking for files ending with {expected_suffixes}")
+        raise FileNotFoundError(f"Personal account file not found or file closed for {employee_name} in {institution_name} with account number {employee_accountNo}. Looking for files ending with {[f'-{employee_accountNo}.xlsx', f'-{employee_accountNo}.xls']}")
     
     # If multiple matches found, prioritize .xlsx over .xls, then use first match
     if len(matching_files) > 1:
@@ -74,16 +68,61 @@ def find_personal_account_file(employee_name: str, employee_accountNo: str, inst
     return matching_files[0]
 
 
-def perform_personal_account_update_xls(file_path: str, employee_name: str, date: str, capital: float = None, interest: float = None):
+def find_employee_sheet_xls(rb, employee_accountNo: str):
+    """
+    Find the correct sheet for an employee by matching account number in cell J2 for .xls files.
+    Searches from last sheet to first sheet.
+    
+    Args:
+        rb: The xlrd workbook object
+        employee_accountNo (str): Account number to match
+        
+    Returns:
+        tuple: (sheet_index, sheet_object) of the matching sheet
+        
+    Raises:
+        ValueError: If no matching sheet is found
+    """
+    # Get all sheets and search from last to first
+    for sheet_index in range(rb.nsheets - 1, -1, -1):
+        try:
+            sheet = rb.sheet_by_index(sheet_index)
+            
+            # Check if sheet has at least 2 rows and 10 columns (J is column 9, 0-indexed)
+            if sheet.nrows >= 2 and sheet.ncols >= 10:
+                # Get value from cell J2 (row 1, column 9 in 0-indexed)
+                j2_value = sheet.cell_value(1, 9)
+                
+                if j2_value and isinstance(j2_value, str):
+                    # Split by '/' and check if we have at least 3 parts
+                    parts = j2_value.split('/')
+                    if len(parts) >= 3:
+                        # Extract the string between 2nd and 3rd slash (index 2)
+                        account_part = parts[2]
+                        if account_part == employee_accountNo:
+                            logger.info(f"Found matching sheet: {sheet.name} (index {sheet_index}) with account number {employee_accountNo}")
+                            return sheet_index, sheet
+        except Exception as e:
+            # Log warning but continue searching other sheets
+            logger.warning(f"Error reading cell J2 from sheet index {sheet_index}: {e}")
+            continue
+    
+    # If no matching sheet found
+    raise ValueError(f"No sheet found with account number {employee_accountNo} in cell J2")
+
+
+def perform_personal_account_update_xls(file_path: str, employee_name: str, employee_accountNo: str, date: str, capital: float = None, interest: float = None, description: str = None) -> int:
     """
     Handle .xls files using xlrd/xlwt
     
     Args:
         file_path (str): Full path to the .xls file
         employee_name (str): Name of the employee
+        employee_accountNo (str): Account number of the employee
         date (str): Date of the payment
         capital (float, optional): Capital amount. Defaults to None.
         interest (float, optional): Interest amount. Defaults to None.
+        description (str, optional): Description for the entry. Defaults to None.
         
     Returns:
         int: The row number that was updated
@@ -91,7 +130,9 @@ def perform_personal_account_update_xls(file_path: str, employee_name: str, date
     
     # Read the existing file
     rb = xlrd.open_workbook(file_path, formatting_info=True)
-    sheet = rb.sheet_by_index(0)
+    
+    # Find the correct sheet for this employee
+    sheet_index, sheet = find_employee_sheet_xls(rb, employee_accountNo)
     
     # Find 4 consecutive empty rows
     current_row = None
@@ -136,7 +177,7 @@ def perform_personal_account_update_xls(file_path: str, employee_name: str, date
     
     # Create a copy of the workbook for writing
     wb = copy(rb)
-    ws = wb.get_sheet(0)
+    ws = wb.get_sheet(sheet_index)  # Use the found sheet index
     
     # Update the cells
     ws.write(current_row, 0, date)  # Date in Column A (0)
@@ -147,6 +188,9 @@ def perform_personal_account_update_xls(file_path: str, employee_name: str, date
         
     if capital is not None:
         ws.write(current_row, 8, capital)  # Capital in Column I (8)
+
+    if description is not None:
+        ws.write(current_row, 4, description)  # Description in Column E (4)
     
     # Save the file
     wb.save(file_path)
@@ -154,7 +198,48 @@ def perform_personal_account_update_xls(file_path: str, employee_name: str, date
     return current_row
 
 
-def perform_personal_account_update(workbook, employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None):
+def find_employee_sheet(workbook, employee_accountNo: str):
+    """
+    Find the correct sheet for an employee by matching account number in cell J2.
+    Searches from last sheet to first sheet.
+    
+    Args:
+        workbook: The openpyxl workbook object
+        employee_accountNo (str): Account number to match
+        
+    Returns:
+        worksheet: The matching worksheet object
+        
+    Raises:
+        ValueError: If no matching sheet is found
+    """
+    # Get all worksheets and reverse the order (last to first)
+    worksheets = workbook.worksheets
+    
+    for ws in reversed(worksheets):
+        try:
+            # Get value from cell J2
+            j2_value = ws.cell(row=2, column=10).value  # Column J is 10
+            
+            if j2_value and isinstance(j2_value, str):
+                # Split by '/' and check if we have at least 3 parts
+                parts = j2_value.split('/')
+                if len(parts) >= 3:
+                    # Extract the string between 2nd and 3rd slash (index 2)
+                    account_part = parts[2]
+                    if account_part == employee_accountNo:
+                        logger.info(f"Found matching sheet: {ws.title} with account number {employee_accountNo}")
+                        return ws
+        except Exception as e:
+            # Log warning but continue searching other sheets
+            logger.warning(f"Error reading cell J2 from sheet {ws.title}: {e}")
+            continue
+    
+    # If no matching sheet found
+    raise ValueError(f"No sheet found with account number {employee_accountNo} in cell J2")
+
+
+def perform_personal_account_update(workbook, employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None, description: str = None) -> int:
     """
     Separated personal account update logic to work with atomic operations
     
@@ -166,12 +251,14 @@ def perform_personal_account_update(workbook, employee_name: str, employee_accou
         date (str): Date of the payment
         capital (float, optional): Capital amount. Defaults to None.
         interest (float, optional): Interest amount. Defaults to None.
+        description (str, optional): Description for the entry. Defaults to None.
         
     Returns:
         int: The row number that was updated
     """
     
-    ws = workbook.active  # Get the active sheet
+    # Find the correct sheet for this employee
+    ws = find_employee_sheet(workbook, employee_accountNo)
     
     # Find 4 consecutive empty rows
     current_row = None
@@ -218,13 +305,15 @@ def perform_personal_account_update(workbook, employee_name: str, employee_accou
     if capital is not None:
         ws.cell(row=current_row, column=9).value = capital
     
+    if description is not None:
+        ws.cell(row=current_row, column=4).value = description
     # Updating column 2 with the word BS
     ws.cell(row=current_row, column=2).value = "BS"
     
     return current_row
 
 
-def update_personal_account(employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None) -> dict:
+def update_personal_account(employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None, description: str = None) -> dict:
     """
     Updates the personal account Excel file for a specific employee with payment information.
     Looks for 4 consecutive empty rows and uses the first one for the update.
@@ -260,7 +349,8 @@ def update_personal_account(employee_name: str, employee_accountNo: str, institu
                     institution_name, 
                     date, 
                     capital, 
-                    interest
+                    interest,
+                    description
                 )
         elif file_path.lower().endswith('.xls'):
             logger.info("Processing .xls file with xlrd/xlwt")
@@ -269,7 +359,8 @@ def update_personal_account(employee_name: str, employee_accountNo: str, institu
                 employee_name, 
                 date, 
                 capital, 
-                interest
+                interest,
+                description
             )
         else:
             raise ValueError(f"Unsupported file format: {file_path}")
