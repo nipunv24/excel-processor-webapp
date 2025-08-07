@@ -7,8 +7,6 @@ from util.atomic_excel_operations import atomic_excel_operation
 load_dotenv()
 
 MAIN_LEDGER_FILE = os.getenv('MAIN_LEDGER_FILEPATH')
-CURRENT_MONTH_LEDGER_INTEREST_COLUMN = os.getenv('CURRENT_MONTH_LEDGER_INTEREST_COLUMN')
-CURRENT_MONTH_LEDGER_DEBIT_COLUMN = os.getenv('CURRENT_MONTH_LEDGER_DEBIT_COLUMN')
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,13 +34,13 @@ def perform_main_ledger_update(workbook, employee_name: str, employee_accountNo:
             interest_col_num = column_index_from_string(ledger_interest_column)
             logger.info(f"Interest column '{ledger_interest_column}' converted to column number: {interest_col_num}")
         else:
-            raise ValueError("CURRENT_MONTH_LEDGER_INTEREST_COLUMN environment variable not set")
+            raise ValueError("ledger interest column variable not set")
             
         if ledger_debit_column:
             debit_col_num = column_index_from_string(ledger_debit_column)
             logger.info(f"Debit column '{ledger_debit_column}' converted to column number: {debit_col_num}")
         else:
-            raise ValueError("CURRENT_MONTH_LEDGER_DEBIT_COLUMN environment variable not set")
+            raise ValueError("ledger debit column variable not set")
     except Exception as e:
         logger.error(f"Error converting column letters to numbers: {str(e)}")
         raise ValueError(f"Error converting column letters to numbers: {str(e)}")
@@ -135,7 +133,7 @@ def perform_main_ledger_update(workbook, employee_name: str, employee_accountNo:
         new_interest = current_interest + interest
         interest_cell.value = new_interest
         
-        logger.info(f"Updated interest for {employee_name}: {current_interest} + {interest} = {new_interest} (Column {CURRENT_MONTH_LEDGER_INTEREST_COLUMN}, Row {employee_row})")
+        logger.info(f"Updated interest for {employee_name}: {current_interest} + {interest} = {new_interest} (Column {ledger_interest_column}, Row {employee_row})")
         updates_made.append(f"interest: {current_interest} + {interest} = {new_interest}")
     
     if capital is not None and capital != 0:
@@ -158,7 +156,7 @@ def perform_main_ledger_update(workbook, employee_name: str, employee_accountNo:
         new_debit = current_debit + capital
         debit_cell.value = new_debit
         
-        logger.info(f"Updated capital for {employee_name}: {current_debit} + {capital} = {new_debit} (Column {CURRENT_MONTH_LEDGER_DEBIT_COLUMN}, Row {employee_row})")
+        logger.info(f"Updated capital for {employee_name}: {current_debit} + {capital} = {new_debit} (Column {ledger_debit_column}, Row {employee_row})")
         updates_made.append(f"capital: {current_debit} + {capital} = {new_debit}")
     
     logger.info(f"Main ledger update completed successfully for {employee_name}")
@@ -191,17 +189,6 @@ def update_main_ledger(employee_name: str, employee_accountNo: str, institution_
         else:
             logger.info(f"Main ledger file path: {MAIN_LEDGER_FILE}")
         
-        # if not CURRENT_MONTH_LEDGER_INTEREST_COLUMN:
-        #     logger.error("CURRENT_MONTH_LEDGER_INTEREST_COLUMN environment variable not set")
-        #     raise ValueError("CURRENT_MONTH_LEDGER_INTEREST_COLUMN environment variable not set")
-        # else:
-        #     logger.info(f"Interest column: {CURRENT_MONTH_LEDGER_INTEREST_COLUMN}")
-        
-        # if not CURRENT_MONTH_LEDGER_DEBIT_COLUMN:
-        #     logger.error("CURRENT_MONTH_LEDGER_DEBIT_COLUMN environment variable not set")
-        #     raise ValueError("CURRENT_MONTH_LEDGER_DEBIT_COLUMN environment variable not set")
-        # else:
-        #     logger.info(f"Debit column: {CURRENT_MONTH_LEDGER_DEBIT_COLUMN}")
 
         if not ledger_interest_column:
             logger.error("Ledger interest column not provided")
