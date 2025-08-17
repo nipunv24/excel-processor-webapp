@@ -47,15 +47,15 @@ def find_personal_account_file(employee_name: str, employee_accountNo: str, inst
     
     # Search for files that match employee_name.xlsx or employee_name.xls
     matching_files = []
-    expected_filenames = [f"{employee_name}.xlsx", f"{employee_name}.xls"]
     
     for file in os.listdir(directory_path):
-        if file in expected_filenames:
+        if (file.startswith(employee_name) and 
+            (file.endswith('.xlsx') or file.endswith('.xls'))):
             matching_files.append(os.path.join(directory_path, file))
             logger.info(f"Found matching file: {file}")
     
     if not matching_files:
-        raise FileNotFoundError(f"Personal account file not found or file closed for {employee_name} in {institution_name} with account number {employee_accountNo}. Looking for files ending with {[f'-{employee_accountNo}.xlsx', f'-{employee_accountNo}.xls']}")
+        raise FileNotFoundError(f"Personal account file not found or file closed for {employee_name} in {institution_name} with account number {employee_accountNo}.")
     
     # If multiple matches found, prioritize .xlsx over .xls, then use first match
     if len(matching_files) > 1:
