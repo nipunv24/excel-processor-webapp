@@ -561,6 +561,27 @@ table td input:focus {
   background: rgba(102, 126, 234, 0.7);
 }
 
+.log-error {
+  color: red;
+}
+
+.log-success {
+  color: green;
+}
+
+.logs-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  padding: 10px;
+  background-color: #f9f9f9;
+}
+
+.log-item {
+  padding: 2px 0;
+  font-family: 'Courier New', monospace;
+}
+
 /* Animations */
 @keyframes slideIn {
   from {

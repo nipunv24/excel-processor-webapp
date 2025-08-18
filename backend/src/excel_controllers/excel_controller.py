@@ -591,7 +591,9 @@ def perform_batch_payment_operation(workbook, data):
 def submit_batch_payment():
     try:
         data = request.json
-        logger.info("Received batch payment data from frontend: %s", data)
+        logs = []  # Collect all log messages
+        
+        #logs.append(f"Received batch payment data from frontend: {len(data.get('employees', []))} employees")
 
         # Extract and validate batch data
         date = data.get("date")
@@ -604,54 +606,97 @@ def submit_batch_payment():
         if not all([date, first_entry, employees]):
             return jsonify({"error": "Date, first entry, and employees list are required"}), 400
 
+        logs.append("Starting batch payment processing...")
+        
         # Perform atomic Excel operation
         with atomic_excel_operation(EXCEL_FILE_PATH) as workbook:
             updated_rows, processed_employees = perform_batch_payment_operation(workbook, data)
 
+        logs.append(f"Excel operation completed. Updated {len(updated_rows)} rows.")
+
         # After successful Excel update, update personal accounts
         personal_account_results = []
         for employee in processed_employees:
-            logger.info("Updating personal account for employee: %s of institution: %s", 
-                       employee.get("name"), employee.get("institution"))
+            employee_name = employee.get("name")
+            institution_name = employee.get("institution")
             
+            logs.append(f"Processing employee: {employee_name} from {institution_name}")
+            
+            # Update personal account
+            logger.info("Updating personal account for employee: %s of institution: %s", 
+                       employee_name, institution_name)
+            #logs.append(f"Updating personal account for {employee_name}")
             personal_account_result = update_personal_account(
-                employee_name=employee.get("name"),
+                employee_name=employee_name,
                 employee_accountNo=employee.get("accNo"),
-                institution_name=employee.get("institution"),
+                institution_name=institution_name,
                 date=date,
                 capital=float(employee.get("capitalAmount")) if employee.get("capitalAmount") else None,
                 interest=float(employee.get("interestAmount")) if employee.get("interestAmount") else None,
                 description=employee.get("description")
             )
 
+            if personal_account_result["success"]:
+                logger.info("Personal account update successful for %s: %s", 
+                           employee_name, personal_account_result["message"])
+                logs.append(f"✓ Personal account updated successfully for {employee_name}")
+            else:
+                logger.error("Failed to update personal account for %s: %s", 
+                           employee_name, personal_account_result["error"])
+                logs.append(f"✗ Failed to update personal account for {employee_name}: {personal_account_result['error']}")
+
+            # Update trial balance interest
             logger.info("Updating trial balance interest for employee: %s of institution: %s", 
-                       employee.get("name"), employee.get("institution"))
+                       employee_name, institution_name)
+            #logs.append(f"Updating trial balance interest for {employee_name}")
             update_trial_balance_interest_result = update_interest_trial_balance(
-                employee_name=employee.get("name"),
+                employee_name=employee_name,
                 employee_accountNo=employee.get("accNo"),
-                institution_name=employee.get("institution"),
+                institution_name=institution_name,
                 date=date,
                 capital=float(employee.get("capitalAmount")) if employee.get("capitalAmount") else None,
                 interest=float(employee.get("interestAmount")) if employee.get("interestAmount") else None
             )
 
+            if update_trial_balance_interest_result["success"]:
+                logger.info("Trial balance interest update successful for %s: %s", 
+                           employee_name, update_trial_balance_interest_result["message"])
+                logs.append(f"✓ Trial balance interest updated successfully for {employee_name}")
+            else:
+                logger.error("Failed to update trial balance interest for %s: %s", 
+                           employee_name, update_trial_balance_interest_result["error"])
+                logs.append(f"✗ Failed to update trial balance interest for {employee_name}: {update_trial_balance_interest_result['error']}")
+
+            # Update trial balance capital
             logger.info("Updating trial balance capital for employee: %s of institution: %s", 
-                       employee.get("name"), employee.get("institution"))
+                       employee_name, institution_name)
+            #logs.append(f"Updating trial balance capital for {employee_name}")
             update_trial_balance_capital_result = update_capital_trial_balance(
-                employee_name=employee.get("name"),
+                employee_name=employee_name,
                 employee_accountNo=employee.get("accNo"),
-                institution_name=employee.get("institution"),
+                institution_name=institution_name,
                 date=date,
                 capital=float(employee.get("capitalAmount")) if employee.get("capitalAmount") else None,
                 interest=float(employee.get("interestAmount")) if employee.get("interestAmount") else None
             )
 
+            if update_trial_balance_capital_result["success"]:
+                logger.info("Trial balance capital update successful for %s: %s", 
+                           employee_name, update_trial_balance_capital_result["message"])
+                logs.append(f"✓ Trial balance capital updated successfully for {employee_name}")
+            else:
+                logger.error("Failed to update trial balance capital for %s: %s", 
+                           employee_name, update_trial_balance_capital_result["error"])
+                logs.append(f"✗ Failed to update trial balance capital for {employee_name}: {update_trial_balance_capital_result['error']}")
+
+            # Update main ledger
             logger.info("Updating main ledger for employee: %s of institution: %s", 
-                       employee.get("name"), employee.get("institution"))
+                       employee_name, institution_name)
+            #logs.append(f"Updating main ledger for {employee_name}")
             update_main_ledger_result = update_main_ledger(
-                employee_name=employee.get("name"),
+                employee_name=employee_name,
                 employee_accountNo=employee.get("accNo"),
-                institution_name=employee.get("institution"),
+                institution_name=institution_name,
                 date=date,
                 ledger_debit_column=ledger_debit_column,
                 ledger_interest_column=ledger_interest_column,
@@ -659,51 +704,46 @@ def submit_batch_payment():
                 interest=float(employee.get("interestAmount")) if employee.get("interestAmount") else None
             )
 
-            if not personal_account_result["success"]:
-                logger.error("Failed to update personal account for %s: %s", 
-                           employee.get("name"), personal_account_result["error"])
-            else:
-                logger.info("Personal account update successful for %s: %s", 
-                           employee.get("name"), personal_account_result["message"])
-
-            if not update_trial_balance_interest_result["success"]:
-                logger.error("Failed to update trial balance interest for %s: %s", 
-                           employee.get("name"), update_trial_balance_interest_result["error"])
-            else:
-                logger.info("Trial balance interest update successful for %s: %s", 
-                           employee.get("name"), update_trial_balance_interest_result["message"])
-
-            if not update_trial_balance_capital_result["success"]:
-                logger.error("Failed to update trial balance capital for %s: %s", 
-                           employee.get("name"), update_trial_balance_capital_result["error"])
-            else:
-                logger.info("Trial balance capital update successful for %s: %s", 
-                           employee.get("name"), update_trial_balance_capital_result["message"])
-                
-            if not update_main_ledger_result["success"]:
-                logger.error("Failed to update main ledger for %s: %s", 
-                           employee.get("name"), update_main_ledger_result["error"])
-            else:
+            if update_main_ledger_result["success"]:
                 logger.info("Main ledger update successful for %s: %s", 
-                           employee.get("name"), update_main_ledger_result["message"])
+                           employee_name, update_main_ledger_result["message"])
+                logs.append(f"✓ Main ledger updated successfully for {employee_name}")
+            else:
+                logger.error("Failed to update main ledger for %s: %s", 
+                           employee_name, update_main_ledger_result["error"])
+                logs.append(f"✗ Failed to update main ledger for {employee_name}: {update_main_ledger_result['error']}")
+
+            logs.append(f"Completed processing for {employee_name}")
 
             personal_account_results.append({
-                "employee": employee.get("name"),
+                "employee": employee_name,
                 "result": personal_account_result
             })
 
-        # Return success message with the rows that were updated
+        logs.append("Batch payment processing completed successfully!")
+
+        # Return success message with logs
         return jsonify({
             "message": "Batch payment information updated successfully in Excel!",
             "rows_updated": updated_rows,
-            "personal_account_updates": personal_account_results
+            "personal_account_updates": personal_account_results,
+            "logs": logs,  # Include all collected logs
+            "success": True
         }), 200
 
     except Exception as e:
-        logger.error("Error in submit_batch_payment: %s", str(e))
+        error_msg = str(e)
+        logs.append(f"Error occurred: {error_msg}")
+        
+        logger.error("Error in submit_batch_payment: %s", error_msg)
         import traceback
         logger.error(traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
+        
+        return jsonify({
+            "error": error_msg,
+            "logs": logs if 'logs' in locals() else [f"Error: {error_msg}"],
+            "success": False
+        }), 500
 
 if __name__ == '__main__':    
     app.run()

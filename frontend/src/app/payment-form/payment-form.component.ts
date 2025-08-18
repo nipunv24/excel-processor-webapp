@@ -54,6 +54,11 @@ export class PaymentFormComponent implements OnInit {
   batchEmployees: BatchEmployee[] = [];
   batchCounter: number = 1;
 
+  // Logs Display Properties
+  showLogs: boolean = false;
+  logs: string[] = [];
+  batchProcessingComplete: boolean = false;
+
   // Common Properties
   message: string = '';
   isError: boolean = false;
@@ -71,6 +76,8 @@ export class PaymentFormComponent implements OnInit {
 
   setActiveTab(tab: 'individual' | 'batch'): void {
     this.activeTab = tab;
+    // Clear logs when switching tabs
+    this.clearLogs();
   }
 
   loadInstitutions(): void {
@@ -139,12 +146,12 @@ export class PaymentFormComponent implements OnInit {
   }
 
   toggleSelectAll(event: any): void {
-  if (event.target.checked) {
-    this.selectAllEmployees();
-  } else {
-    this.deselectAllEmployees();
+    if (event.target.checked) {
+      this.selectAllEmployees();
+    } else {
+      this.deselectAllEmployees();
+    }
   }
-}
 
   areAllEmployeesSelected(): boolean {
     const employees = this.getEmployeesForInstitution();
@@ -276,21 +283,49 @@ export class PaymentFormComponent implements OnInit {
       }))
     };
 
-    console.log('Sending batch data:', batchData); // Add logging to debug
+    console.log('Sending batch data:', batchData);
 
+    // Clear previous logs and prepare for new ones
+    this.clearLogs();
     this.loading = true;
+
     this.excelService.submitBatchPayment(batchData).subscribe({
       next: (res) => {
+        console.log('Backend response:', res);
+        
+        // Display logs from backend response
+        if (res.logs && Array.isArray(res.logs)) {
+          this.logs = res.logs;
+          this.showLogs = true;
+        }
+        
+        this.batchProcessingComplete = true;
         this.showSuccess('Batch payment submitted successfully!');
-        this.resetBatchForm();
         this.loading = false;
       },
       error: (err) => {
-        console.error('Batch payment error:', err); // Add error logging
+        console.error('Batch payment error:', err);
+        
+        // Display error logs if available
+        if (err.error && err.error.logs && Array.isArray(err.error.logs)) {
+          this.logs = err.error.logs;
+        } else {
+          this.logs = [`Error: ${err.error?.error || 'Unknown error occurred'}`];
+        }
+        
+        this.showLogs = true;
+        this.batchProcessingComplete = true;
         this.showError('Failed to submit batch payment: ' + (err.error?.error || 'Unknown error'));
         this.loading = false;
       }
     });
+  }
+
+  // Log management methods
+  clearLogs(): void {
+    this.logs = [];
+    this.showLogs = false;
+    this.batchProcessingComplete = false;
   }
 
   resetForm(): void {
@@ -312,6 +347,7 @@ export class PaymentFormComponent implements OnInit {
     this.batchDescription = '';
     this.batchEmployees = [];
     this.batchCounter = 1;
+    this.clearLogs(); // Clear logs when resetting
   }
 
   private showSuccess(msg: string): void {

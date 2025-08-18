@@ -211,5 +211,17 @@
         </button>
       </div>
     </div>
+
+    <!-- Batch Processing Logs -->
+    <div class="form-section" *ngIf="showLogs && logs.length > 0">
+      <h4>Processing Logs</h4>
+      <div class="logs-container">
+        <div *ngFor="let log of logs; let i = index" 
+            class="log-item"
+            [ngClass]="{'log-error': log.startsWith('✗'), 'log-success': log.startsWith('✓')}">
+          {{ i + 1 }}. {{ log }}
+        </div>
+      </div>
+    </div>
   </div>
 </div>
