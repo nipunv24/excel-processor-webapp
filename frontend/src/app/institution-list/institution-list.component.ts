@@ -41,9 +41,11 @@ export class InstitutionListComponent implements OnInit {
     newName: ''
   };
     
+  // FIXED: Added id field and originalId to track changes
   editEmployeeData = {
     institutionName: '',
-    employeeId: '',
+    originalId: '', // Track the original ID for backend identification
+    id: '', // New editable ID field
     name: '',
     accountNo: '',
     capital: null as number | null,
@@ -150,10 +152,12 @@ export class InstitutionListComponent implements OnInit {
     }
   }
 
-  deleteEmployee(institutionName: string, employeeId: string, employeeName: string): void {
-    if (confirm(`Are you sure you want to delete employee "${employeeName}"?`)) {
+  // FIXED: Modified to use accountNo as the unique identifier for deletion
+  deleteEmployee(institutionName: string, employeeId: string, accountNo: string, employeeName: string): void {
+    if (confirm(`Are you sure you want to delete employee "${employeeName}" with account "${accountNo}"?`)) {
       this.loading = true;
-      this.excelService.deleteEmployee(institutionName, employeeId).subscribe({
+      // Use accountNo as the identifier instead of employeeId to ensure correct employee is deleted
+      this.excelService.deleteEmployeeByAccount(institutionName, accountNo).subscribe({
         next: (res) => {
           this.showSuccess('Employee deleted successfully!');
           this.loadInstitutions(); // Reload the list
@@ -201,11 +205,12 @@ export class InstitutionListComponent implements OnInit {
     });
   }
 
-  // Edit Employee Methods
+  // FIXED: Edit Employee Methods - Now includes ID editing
   openEditEmployeeModal(institutionName: string, employee: Employee): void {
     this.editEmployeeData = {
       institutionName: institutionName,
-      employeeId: employee.id,
+      originalId: employee.id, // Store original ID for backend reference
+      id: employee.id, // Editable ID field
       name: employee.name,
       accountNo: employee.accountNo,
       capital: (employee as any).capital || null,
@@ -218,7 +223,8 @@ export class InstitutionListComponent implements OnInit {
     this.showEditEmployeeModal = false;
     this.editEmployeeData = {
       institutionName: '',
-      employeeId: '',
+      originalId: '',
+      id: '',
       name: '',
       accountNo: '',
       capital: null,
@@ -227,22 +233,24 @@ export class InstitutionListComponent implements OnInit {
   }
 
   saveEmployeeEdit(): void {
-    if (!this.editEmployeeData.name.trim() || !this.editEmployeeData.accountNo.trim()) {
-      this.showError('Name and Account Number are required');
+    if (!this.editEmployeeData.name.trim() || !this.editEmployeeData.accountNo.trim() || !this.editEmployeeData.id.trim()) {
+      this.showError('ID, Name and Account Number are required');
       return;
     }
 
     this.loading = true;
     const employeeData = {
+      id: this.editEmployeeData.id, // Include the new ID
       name: this.editEmployeeData.name,
       accountNo: this.editEmployeeData.accountNo,
       capital: this.editEmployeeData.capital,
       interest: this.editEmployeeData.interest
     };
 
+    // Use originalId to identify the employee to be updated
     this.excelService.editEmployee(
       this.editEmployeeData.institutionName,
-      this.editEmployeeData.employeeId,
+      this.editEmployeeData.originalId,
       employeeData
     ).subscribe({
       next: (res) => {

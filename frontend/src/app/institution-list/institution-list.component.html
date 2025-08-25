@@ -73,7 +73,8 @@
                       <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                   </button>
-                  <button class="remove-btn" (click)="deleteEmployee(institution.institution_name, employee.id, employee.name)" title="Remove Employee">
+                  <!-- FIXED: Now using accountNo instead of name for deletion -->
+                  <button class="remove-btn" (click)="deleteEmployee(institution.institution_name, employee.id, employee.accountNo, employee.name)" title="Remove Employee">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <polyline points="3,6 5,6 21,6"></polyline>
                       <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
@@ -190,6 +191,17 @@
       <button class="close-btn" (click)="closeEditEmployeeModal()">&times;</button>
     </div>
     <div class="modal-body">
+      <!-- FIXED: Added ID field for editing -->
+      <div class="form-group">
+        <label for="employeeId">Employee ID (NIC):</label>
+        <input 
+          type="text" 
+          id="employeeId"
+          [(ngModel)]="editEmployeeData.id" 
+          class="form-input"
+          placeholder="Enter employee ID/NIC"
+        >
+      </div>
       <div class="form-group">
         <label for="employeeName">Employee Name:</label>
         <input 

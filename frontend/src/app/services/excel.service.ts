@@ -51,10 +51,10 @@ export class ExcelService {
     return this.http.post<any>(`${this.baseUrl}/addEmployees`, payload, this.httpOptions);
   }
 
-  deleteEmployee(institution_name: string, employee_id: string): Observable<any> {
+  deleteEmployeeByAccount(institution_name: string, accountNo: string): Observable<any> {
     const options = {
       headers: this.httpOptions.headers,
-      body: { institution_name, employee_id }
+      body: { institution_name, accountNo }
     };
     return this.http.delete<any>(`${this.baseUrl}/deleteEmployee`, options);
   }

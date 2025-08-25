@@ -176,10 +176,10 @@ def delete_employee():
     try:
         data = request.json
         institution_name = data.get("institution_name")
-        employee_id = data.get("employee_id")
+        account_no = data.get("accountNo")
         
-        if not institution_name or not employee_id:
-            return jsonify({"error": "Institution name and employee ID are required"}), 400
+        if not institution_name or not account_no:
+            return jsonify({"error": "Institution name and account number are required"}), 400
             
         db = get_db()
         institutions_collection = db["institutions"]
@@ -190,13 +190,13 @@ def delete_employee():
         if not institution:
             return jsonify({"error": "Institution not found"}), 404
             
-        # Remove the employee from the list
+        # Remove the employee from the list by account number
         employees = institution["employees"]
         initial_count = len(employees)
-        employees = [emp for emp in employees if emp["id"] != employee_id]
+        employees = [emp for emp in employees if emp["accountNo"] != account_no]
         
         if len(employees) == initial_count:
-            return jsonify({"error": "Employee not found"}), 404
+            return jsonify({"error": "Employee with this account number not found"}), 404
             
         # Update the institution with the modified employees list
         institutions_collection.update_one(
