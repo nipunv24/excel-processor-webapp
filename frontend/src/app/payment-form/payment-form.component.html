@@ -1,17 +1,14 @@
 <div class="container">
   <h2>Payment Management</h2>
 
-  <!-- Status messages -->
   <div *ngIf="message" [ngClass]="isError ? 'error-message' : 'success-message'">
     {{ message }}
   </div>
 
-  <!-- Loading indicator -->
   <div *ngIf="loading" class="loading">
     Processing...
   </div>
 
-  <!-- Tab Navigation -->
   <div class="tab-navigation">
     <button [class.active]="activeTab === 'individual'" (click)="setActiveTab('individual')">
       Add Individual Payment
@@ -21,7 +18,6 @@
     </button>
   </div>
 
-  <!-- Individual Payment Form -->
   <div class="form-section" *ngIf="activeTab === 'individual'">
     <h3>Add Individual Payment</h3>
     <div class="form-group">
@@ -97,7 +93,6 @@
     </div>
   </div>
 
-  <!-- Batch Payment Form -->
   <div class="form-section" *ngIf="activeTab === 'batch'">
     <h3>Add Batch Payment</h3>
     
@@ -112,25 +107,17 @@
         </select>
       </div>
 
-      <!-- Employee Selection with Checkboxes -->
       <div class="employee-selection" *ngIf="selectedBatchInstitution">
         <div class="employee-header">
           <div class="select-all-container">
-            <input type="checkbox" 
-                   id="selectAllCheckbox"
-                   [checked]="areAllEmployeesSelected()"
-                   [disabled]="getEmployeesForInstitution().length === 0"
-                   (change)="toggleSelectAll($event)">
+            <input type="checkbox" id="selectAllCheckbox" [checked]="areAllEmployeesSelected()" [disabled]="getEmployeesForInstitution().length === 0" (change)="toggleSelectAll($event)">
             <label for="selectAllCheckbox" class="select-all-label">Select All</label>
           </div>
         </div>
         <div class="employee-list">
           <div class="employee-item" *ngFor="let employee of getEmployeesForInstitution()">
             <div class="employee-info">
-              <input type="checkbox" 
-                     [id]="'employee-' + getEmployeeUniqueKey(employee)"
-                     [checked]="isEmployeeSelected(employee)"
-                     (change)="toggleEmployeeSelection(employee)">
+              <input type="checkbox" [id]="'employee-' + getEmployeeUniqueKey(employee)" [checked]="isEmployeeSelected(employee)" (change)="toggleEmployeeSelection(employee)">
               <label [for]="'employee-' + getEmployeeUniqueKey(employee)">
                 {{ employee.name }} ({{ employee.id }}) - Acc: {{ employee.accountNo }}
               </label>
@@ -153,6 +140,17 @@
         </select>
       </div>
 
+      <div class="form-row">
+        <div class="form-group half-width">
+          <label for="batchBillNo">Bill No (Optional):</label>
+          <input type="text" id="batchBillNo" [(ngModel)]="batchBillNo" placeholder="Enter Bill No">
+        </div>
+        <div class="form-group half-width">
+          <label for="batchChequeNo">Cheque No (Optional):</label>
+          <input type="text" id="batchChequeNo" [(ngModel)]="batchChequeNo" placeholder="Enter Cheque No">
+        </div>
+      </div>
+
       <div class="form-group">
         <label for="batchDescription">Description:</label>
         <input type="text" id="batchDescription" [(ngModel)]="batchDescription" placeholder="Enter description">
@@ -163,7 +161,6 @@
       </button>
     </div>
 
-    <!-- Batch List -->
     <div class="batch-list" *ngIf="batchEmployees.length > 0">
       <h4>Selected Employees</h4>
       <table>
@@ -182,12 +179,8 @@
             <td>{{ employee.name }}</td>
             <td>{{ employee.accNo }}</td>
             <td>{{ employee.institution }}</td>
-            <td>
-              <input type="number" [(ngModel)]="employee.capitalAmount" placeholder="Capital">
-            </td>
-            <td>
-              <input type="number" [(ngModel)]="employee.interestAmount" placeholder="Interest">
-            </td>
+            <td><input type="number" [(ngModel)]="employee.capitalAmount"></td>
+            <td><input type="number" [(ngModel)]="employee.interestAmount"></td>
             <td>
               <button class="remove-btn" (click)="removeFromBatchList(i)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -212,13 +205,10 @@
       </div>
     </div>
 
-    <!-- Batch Processing Logs -->
     <div class="form-section" *ngIf="showLogs && logs.length > 0">
       <h4>Processing Logs</h4>
       <div class="logs-container">
-        <div *ngFor="let log of logs; let i = index" 
-            class="log-item"
-            [ngClass]="{'log-error': log.startsWith('✗'), 'log-success': log.startsWith('✓')}">
+        <div *ngFor="let log of logs; let i = index" class="log-item" [ngClass]="{'log-error': log.startsWith('✗'), 'log-success': log.startsWith('✓')}">
           {{ i + 1 }}. {{ log }}
         </div>
       </div>

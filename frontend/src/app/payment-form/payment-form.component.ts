@@ -24,6 +24,8 @@ interface BatchEmployee {
   interestAmount: number | null;
   bankName: string;
   description: string;
+  billNo: string;    
+  chequeNo: string;
 }
 
 @Component({
@@ -53,6 +55,9 @@ export class PaymentFormComponent implements OnInit {
   batchDescription: string = '';
   batchEmployees: BatchEmployee[] = [];
   batchCounter: number = 1;
+  batchBillNo: string = '';
+  batchChequeNo: string = '';
+
 
   // Logs Display Properties
   showLogs: boolean = false;
@@ -183,7 +188,9 @@ export class PaymentFormComponent implements OnInit {
           capitalAmount: employee.capital || null,
           interestAmount: employee.interest || null,
           bankName: this.batchBankName,
-          description: this.batchDescription
+          description: this.batchDescription,
+          billNo: this.batchBillNo,    
+          chequeNo: this.batchChequeNo
         };
 
         this.batchEmployees.push(batchEmployee);
@@ -279,7 +286,9 @@ export class PaymentFormComponent implements OnInit {
         capitalAmount: emp.capitalAmount,
         interestAmount: emp.interestAmount,
         bankName: emp.bankName,
-        description: emp.description
+        description: emp.description,
+        billNo: emp.billNo || '',      // Added this
+        chequeNo: emp.chequeNo || ''   // Added this
       }))
     };
 
@@ -345,6 +354,8 @@ export class PaymentFormComponent implements OnInit {
     this.selectedEmployees.clear();
     this.batchBankName = '';
     this.batchDescription = '';
+    this.batchBillNo = '';      // Added this
+    this.batchChequeNo = '';
     this.batchEmployees = [];
     this.batchCounter = 1;
     this.clearLogs(); // Clear logs when resetting

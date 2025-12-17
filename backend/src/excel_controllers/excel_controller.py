@@ -521,6 +521,9 @@ def perform_batch_payment_operation(workbook, data):
         bank_name = employee.get("bankName", "")
         description = employee.get("description", "")
 
+        bill_no = employee.get("billNo")
+        cheque_no = employee.get("chequeNo", "")
+
         # Validate required fields for each employee
         if not all([institute, name, acc_no]) or (capital_amount is None and interest_amount is None):
             raise ValueError(f"Missing required fields for employee {name}")
@@ -544,8 +547,8 @@ def perform_batch_payment_operation(workbook, data):
         ws.cell(row=current_row, column=1).value = date
 
         # Update the cells with employee data
-        ws.cell(row=current_row, column=2).value = "BS"  # Bill Number is always "BS"
-        ws.cell(row=current_row, column=3).value = ""    # Empty Cheque No
+        ws.cell(row=current_row, column=2).value = bill_no if bill_no else "BS"  # Bill Number is always "BS"
+        ws.cell(row=current_row, column=3).value = cheque_no 
         ws.cell(row=current_row, column=4).value = acc_no
         ws.cell(row=current_row, column=5).value = name
         ws.cell(row=current_row-1, column=5).value = institute
