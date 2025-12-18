@@ -622,6 +622,10 @@ def submit_batch_payment():
         for employee in processed_employees:
             employee_name = employee.get("name")
             institution_name = employee.get("institution")
+
+            b_no = employee.get("billNo") if employee.get("billNo") else "BS"
+            # If chequeNo is empty/None, use empty string
+            c_no = employee.get("chequeNo", "")
             
             logs.append(f"Processing employee: {employee_name} from {institution_name}")
             
@@ -636,7 +640,9 @@ def submit_batch_payment():
                 date=date,
                 capital=float(employee.get("capitalAmount")) if employee.get("capitalAmount") else None,
                 interest=float(employee.get("interestAmount")) if employee.get("interestAmount") else None,
-                description=employee.get("description")
+                description=employee.get("description"),
+                bill_no=b_no,
+                cheque_no=c_no
             )
 
             if personal_account_result["success"]:

@@ -111,7 +111,7 @@ def find_employee_sheet_xls(rb, employee_accountNo: str):
     raise ValueError(f"No sheet found with account number {employee_accountNo} in cell J2")
 
 
-def perform_personal_account_update_xls(file_path: str, employee_name: str, employee_accountNo: str, date: str, capital: float = None, interest: float = None, description: str = None) -> int:
+def perform_personal_account_update_xls(file_path: str, employee_name: str, employee_accountNo: str, date: str, capital: float = None, interest: float = None, description: str = None, bill_no: str = "BS", cheque_no: str = "") -> int:
     """
     Handle .xls files using xlrd/xlwt
     
@@ -181,7 +181,8 @@ def perform_personal_account_update_xls(file_path: str, employee_name: str, empl
     
     # Update the cells
     ws.write(current_row, 0, date)  # Date in Column A (0)
-    ws.write(current_row, 1, "BS")  # BS in Column B (1)
+    ws.write(current_row, 1, bill_no)   # Column B (1) - Bill No
+    ws.write(current_row, 2, cheque_no) # Column C (2) - Cheque No
     
     if interest is not None:
         ws.write(current_row, 7, interest)  # Interest in Column H (7)
@@ -239,7 +240,7 @@ def find_employee_sheet(workbook, employee_accountNo: str):
     raise ValueError(f"No sheet found with account number {employee_accountNo} in cell J2")
 
 
-def perform_personal_account_update(workbook, employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None, description: str = None) -> int:
+def perform_personal_account_update(workbook, employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None, description: str = None, bill_no: str = "BS", cheque_no: str = "") -> int:
     """
     Separated personal account update logic to work with atomic operations
     
@@ -296,6 +297,12 @@ def perform_personal_account_update(workbook, employee_name: str, employee_accou
     # Update the cells
     # Date in Column A
     ws.cell(row=current_row, column=1).value = date
+
+    # Bill No in Column B (2) - Replaces the hardcoded "BS"
+    ws.cell(row=current_row, column=2).value = bill_no
+    
+    # Cheque No in Column C (3)
+    ws.cell(row=current_row, column=3).value = cheque_no
     
     # Interest in Column H (if provided)
     if interest is not None:
@@ -308,12 +315,12 @@ def perform_personal_account_update(workbook, employee_name: str, employee_accou
     if description is not None:
         ws.cell(row=current_row, column=4).value = description
     # Updating column 2 with the word BS
-    ws.cell(row=current_row, column=2).value = "BS"
+   
     
     return current_row
 
 
-def update_personal_account(employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None, description: str = None) -> dict:
+def update_personal_account(employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None, description: str = None,bill_no: str = "BS",cheque_no: str = "") -> dict:
     """
     Updates the personal account Excel file for a specific employee with payment information.
     Looks for 4 consecutive empty rows and uses the first one for the update.
@@ -333,6 +340,9 @@ def update_personal_account(employee_name: str, employee_accountNo: str, institu
 
     try:
         # Find the file (supports both .xls and .xlsx)
+
+        logger.info(f"********************************************************Personal Account Update Request - Employee: {employee_name}, Bill No: {bill_no}, Cheque No: {cheque_no}********************************************")
+
         file_path = find_personal_account_file(employee_name, employee_accountNo, institution_name)
         
         logger.info(f"The file path of the employee is {file_path}")
@@ -350,7 +360,9 @@ def update_personal_account(employee_name: str, employee_accountNo: str, institu
                     date, 
                     capital, 
                     interest,
-                    description
+                    description,
+                    bill_no,
+                    cheque_no
                 )
         elif file_path.lower().endswith('.xls'):
             logger.info("Processing .xls file with xlrd/xlwt")
@@ -360,7 +372,9 @@ def update_personal_account(employee_name: str, employee_accountNo: str, institu
                 date, 
                 capital, 
                 interest,
-                description
+                description,
+                bill_no,
+                cheque_no
             )
         else:
             raise ValueError(f"Unsupported file format: {file_path}")
