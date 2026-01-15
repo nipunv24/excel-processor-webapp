@@ -650,9 +650,9 @@ def submit_batch_payment():
                            employee_name, personal_account_result["message"])
                 logs.append(f"✓ Personal account updated successfully for {employee_name}")
             else:
-                logger.error("Failed to update personal account for %s: %s", 
-                           employee_name, personal_account_result["error"])
-                logs.append(f"✗ Failed to update personal account for {employee_name}: {personal_account_result['error']}")
+                logger.error("Failed to update personal account for %s in %s: %s", 
+                           employee_name, institution_name, personal_account_result["error"])
+                logs.append(f"✗ Failed to update personal account for {employee_name} in {institution_name}: {personal_account_result['error']}")
 
             # Update trial balance interest
             logger.info("Updating trial balance interest for employee: %s of institution: %s", 

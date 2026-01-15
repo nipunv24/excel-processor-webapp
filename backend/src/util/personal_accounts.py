@@ -175,6 +175,17 @@ def perform_personal_account_update_xls(file_path: str, employee_name: str, empl
     if current_row is None:
         raise ValueError(f"Could not find 4 consecutive empty rows in personal account file for {employee_name}")
     
+    # For xls files, the capital limit is not defined. That means all files should be converted to xlsx for the app to function properly. 
+
+    # validate_capital_limit_xls(
+    #     ws, 
+    #     current_row, 
+    #     capital, 
+    #     employee_name, 
+    #     institution_name, 
+    #     employee_accountNo
+    # )
+    
     # Create a copy of the workbook for writing
     wb = copy(rb)
     ws = wb.get_sheet(sheet_index)  # Use the found sheet index
@@ -240,7 +251,7 @@ def find_employee_sheet(workbook, employee_accountNo: str):
     raise ValueError(f"No sheet found with account number {employee_accountNo} in cell J2")
 
 
-def perform_personal_account_update(workbook, employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None, description: str = None, bill_no: str = "BS", cheque_no: str = "") -> int:
+def perform_personal_account_update(workbook, file_path:str, employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None, description: str = None, bill_no: str = "BS", cheque_no: str = "") -> int:
     """
     Separated personal account update logic to work with atomic operations
     
@@ -293,6 +304,16 @@ def perform_personal_account_update(workbook, employee_name: str, employee_accou
     
     if current_row is None:
         raise ValueError(f"Could not find 4 consecutive empty rows in personal account file for {employee_name}")
+    
+    validate_capital_limit_xlsx(
+        file_path=file_path,           # 1. Path to the file
+        sheet_name=ws.title,                # 2. Name of the sheet
+        row=current_row,                    # 3. Row number
+        capital=capital,                    # 4. Capital amount
+        employee_name=employee_name,        # 5. Name
+        institution_name=institution_name,  # 6. Institution
+        acc_no=employee_accountNo           # 7. Account Number
+    )
         
     # Update the cells
     # Date in Column A
@@ -318,6 +339,64 @@ def perform_personal_account_update(workbook, employee_name: str, employee_accou
    
     
     return current_row
+
+
+def validate_capital_limit_xlsx(file_path: str, sheet_name: str, row: int, capital: float, employee_name: str, institution_name: str, acc_no: str):
+    """
+    Opens a data-only copy of the file to read the calculated formula result
+    from Column K before allowing the update.
+    """
+    if capital is None or capital <= 0:
+        return
+
+    from openpyxl import load_workbook
+    
+    # Open temporary workbook just to read the calculated values
+    temp_wb = load_workbook(file_path, data_only=True, read_only=True)
+    try:
+        if sheet_name not in temp_wb.sheetnames:
+            return # Should not happen as sheet was found earlier
+            
+        temp_ws = temp_wb[sheet_name]
+        # Column K is 11
+        limit_val = temp_ws.cell(row=row, column=11).value
+        
+        # Convert to float, handling None or non-numeric strings
+        try:
+            limit_float = float(limit_val) if limit_val not in (None, "") else 0.0
+        except (ValueError, TypeError):
+            limit_float = 0.0
+
+        if limit_float < capital:
+            raise ValueError(
+                f".....$$$.....Capital limit reached.....$$$....."
+
+            )
+    finally:
+        temp_wb.close()
+
+
+# Depricated: Use validate_capital_limit_xlsx instead
+def validate_capital_limit_xls(sheet, row: int, capital: float, employee_name: str, institution: str, acc_no: str):
+    """Validation for xlrd (.xls) with detailed loan-context messaging."""
+    if capital is None or capital <= 0:
+        return
+        
+    # Column K is 10 (0-indexed)
+    limit_value = 0.0
+    if sheet.ncols > 10:
+        val = sheet.cell_value(row, 10)
+        limit_value = float(val) if val not in (None, "") else 0.0
+        
+    if limit_value < capital:
+        raise ValueError(
+            f"Capital limit reached or insufficient: Employee {employee_name} at {institution} (Acc: {acc_no}) "
+            f"has a remaining balance of {limit_value:.2f}, which is less than the requested update of {capital:.2f}. "
+            f"Account is near to be closed or fully settled."
+        )
+    
+
+
 
 
 def update_personal_account(employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None, description: str = None,bill_no: str = "BS",cheque_no: str = "") -> dict:
@@ -353,16 +432,17 @@ def update_personal_account(employee_name: str, employee_accountNo: str, institu
             # Use existing atomic operations for .xlsx files
             with atomic_excel_operation(file_path) as workbook:
                 current_row = perform_personal_account_update(
-                    workbook, 
-                    employee_name, 
-                    employee_accountNo, 
-                    institution_name, 
-                    date, 
-                    capital, 
-                    interest,
-                    description,
-                    bill_no,
-                    cheque_no
+                    workbook=workbook, 
+                    file_path=file_path,  
+                    employee_name=employee_name, 
+                    employee_accountNo=employee_accountNo, 
+                    institution_name=institution_name, 
+                    date=date, 
+                    capital=capital, 
+                    interest=interest,
+                    description=description,
+                    bill_no=bill_no,
+                    cheque_no=cheque_no
                 )
         elif file_path.lower().endswith('.xls'):
             logger.info("Processing .xls file with xlrd/xlwt")
