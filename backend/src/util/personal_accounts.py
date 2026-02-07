@@ -6,6 +6,9 @@ from xlutils.copy import copy
 import logging
 from dotenv import load_dotenv
 from util.atomic_excel_operations import atomic_excel_operation  # Import our atomic operations
+from util.validate_capital_limit_utilities import validate_capital_limit_xlsx  # Import the capital limit validation function
+from util.finding_files_sheets import find_personal_account_file, find_employee_sheet_xls, find_employee_sheet  # Import file and sheet finding functions
+
 
 load_dotenv()
 
@@ -19,96 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def find_personal_account_file(employee_name: str, employee_accountNo: str, institution_name: str) -> str:
-    """
-    Find the personal account file for an employee using a single flexible search logic.
-    
-    Searches for files that match employee_name.xlsx or employee_name.xls
-    This covers formats like:
-    - K.G.R.S.K.GUNATHILAKA.xlsx (exact match)
-    - K.G.R.S.K.GUNATHILAKA.xls (Excel 97-2003 format)
-    
-    Args:
-        employee_name (str): Name of the employee
-        employee_accountNo (str): Account number of the employee
-        institution_name (str): Name of the institution
-        
-    Returns:
-        str: Full path to the found file
-        
-    Raises:
-        FileNotFoundError: If no matching file is found
-    """
-    directory_path = f"{PERSONAL_ACCOUNT_ROOTPATH}/{institution_name}"
-    
-    # Check if directory exists
-    if not os.path.exists(directory_path):
-        raise FileNotFoundError(f"Directory not found: {directory_path}")
-    
-    # Search for files that match employee_name.xlsx or employee_name.xls
-    matching_files = []
-    
-    for file in os.listdir(directory_path):
-        if (file.startswith(employee_name) and 
-            (file.endswith('.xlsx') or file.endswith('.xls'))):
-            matching_files.append(os.path.join(directory_path, file))
-            logger.info(f"Found matching file: {file}")
-    
-    if not matching_files:
-        raise FileNotFoundError(f"Personal account file not found or file closed for {employee_name} in {institution_name} with account number {employee_accountNo}.")
-    
-    # If multiple matches found, prioritize .xlsx over .xls, then use first match
-    if len(matching_files) > 1:
-        # Sort to prioritize .xlsx files
-        matching_files.sort(key=lambda x: (not x.endswith('.xlsx'), x))
-        logger.warning(f"Multiple files found for {employee_name}-{employee_accountNo}: {[os.path.basename(f) for f in matching_files]}")
-        logger.warning(f"Using the first match (prioritizing .xlsx): {os.path.basename(matching_files[0])}")
-    
-    logger.info(f"Found personal account file: {os.path.basename(matching_files[0])}")
-    return matching_files[0]
 
-
-def find_employee_sheet_xls(rb, employee_accountNo: str):
-    """
-    Find the correct sheet for an employee by matching account number in cell J2 for .xls files.
-    Searches from last sheet to first sheet.
-    
-    Args:
-        rb: The xlrd workbook object
-        employee_accountNo (str): Account number to match
-        
-    Returns:
-        tuple: (sheet_index, sheet_object) of the matching sheet
-        
-    Raises:
-        ValueError: If no matching sheet is found
-    """
-    # Get all sheets and search from last to first
-    for sheet_index in range(rb.nsheets - 1, -1, -1):
-        try:
-            sheet = rb.sheet_by_index(sheet_index)
-            
-            # Check if sheet has at least 2 rows and 10 columns (J is column 9, 0-indexed)
-            if sheet.nrows >= 2 and sheet.ncols >= 10:
-                # Get value from cell J2 (row 1, column 9 in 0-indexed)
-                j2_value = sheet.cell_value(1, 9)
-                
-                if j2_value and isinstance(j2_value, str):
-                    # Split by '/' and check if we have at least 3 parts
-                    parts = j2_value.split('/')
-                    if len(parts) >= 3:
-                        # Extract the string between 2nd and 3rd slash (index 2)
-                        account_part = parts[2]
-                        if account_part == employee_accountNo:
-                            logger.info(f"Found matching sheet: {sheet.name} (index {sheet_index}) with account number {employee_accountNo}")
-                            return sheet_index, sheet
-        except Exception as e:
-            # Log warning but continue searching other sheets
-            logger.warning(f"Error reading cell J2 from sheet index {sheet_index}: {e}")
-            continue
-    
-    # If no matching sheet found
-    raise ValueError(f"No sheet found with account number {employee_accountNo} in cell J2")
 
 
 def perform_personal_account_update_xls(file_path: str, employee_name: str, employee_accountNo: str, date: str, capital: float = None, interest: float = None, description: str = None, bill_no: str = "BS", cheque_no: str = "") -> int:
@@ -175,17 +89,6 @@ def perform_personal_account_update_xls(file_path: str, employee_name: str, empl
     if current_row is None:
         raise ValueError(f"Could not find 4 consecutive empty rows in personal account file for {employee_name}")
     
-    # For xls files, the capital limit is not defined. That means all files should be converted to xlsx for the app to function properly. 
-
-    # validate_capital_limit_xls(
-    #     ws, 
-    #     current_row, 
-    #     capital, 
-    #     employee_name, 
-    #     institution_name, 
-    #     employee_accountNo
-    # )
-    
     # Create a copy of the workbook for writing
     wb = copy(rb)
     ws = wb.get_sheet(sheet_index)  # Use the found sheet index
@@ -210,45 +113,7 @@ def perform_personal_account_update_xls(file_path: str, employee_name: str, empl
     return current_row
 
 
-def find_employee_sheet(workbook, employee_accountNo: str):
-    """
-    Find the correct sheet for an employee by matching account number in cell J2.
-    Searches from last sheet to first sheet.
-    
-    Args:
-        workbook: The openpyxl workbook object
-        employee_accountNo (str): Account number to match
-        
-    Returns:
-        worksheet: The matching worksheet object
-        
-    Raises:
-        ValueError: If no matching sheet is found
-    """
-    # Get all worksheets and reverse the order (last to first)
-    worksheets = workbook.worksheets
-    
-    for ws in reversed(worksheets):
-        try:
-            # Get value from cell J2
-            j2_value = ws.cell(row=2, column=10).value  # Column J is 10
-            
-            if j2_value and isinstance(j2_value, str):
-                # Split by '/' and check if we have at least 3 parts
-                parts = j2_value.split('/')
-                if len(parts) >= 3:
-                    # Extract the string between 2nd and 3rd slash (index 2)
-                    account_part = parts[2]
-                    if account_part == employee_accountNo:
-                        logger.info(f"Found matching sheet: {ws.title} with account number {employee_accountNo}")
-                        return ws
-        except Exception as e:
-            # Log warning but continue searching other sheets
-            logger.warning(f"Error reading cell J2 from sheet {ws.title}: {e}")
-            continue
-    
-    # If no matching sheet found
-    raise ValueError(f"No sheet found with account number {employee_accountNo} in cell J2")
+
 
 
 def perform_personal_account_update(workbook, file_path:str, employee_name: str, employee_accountNo: str, institution_name: str, date: str, capital: float = None, interest: float = None, description: str = None, bill_no: str = "BS", cheque_no: str = "") -> int:
@@ -305,15 +170,6 @@ def perform_personal_account_update(workbook, file_path:str, employee_name: str,
     if current_row is None:
         raise ValueError(f"Could not find 4 consecutive empty rows in personal account file for {employee_name}")
     
-    validate_capital_limit_xlsx(
-        file_path=file_path,           # 1. Path to the file
-        sheet_name=ws.title,                # 2. Name of the sheet
-        row=current_row,                    # 3. Row number
-        capital=capital,                    # 4. Capital amount
-        employee_name=employee_name,        # 5. Name
-        institution_name=institution_name,  # 6. Institution
-        acc_no=employee_accountNo           # 7. Account Number
-    )
         
     # Update the cells
     # Date in Column A
@@ -339,63 +195,6 @@ def perform_personal_account_update(workbook, file_path:str, employee_name: str,
    
     
     return current_row
-
-
-def validate_capital_limit_xlsx(file_path: str, sheet_name: str, row: int, capital: float, employee_name: str, institution_name: str, acc_no: str):
-    """
-    Opens a data-only copy of the file to read the calculated formula result
-    from Column K before allowing the update.
-    """
-    if capital is None or capital <= 0:
-        return
-
-    from openpyxl import load_workbook
-    
-    # Open temporary workbook just to read the calculated values
-    temp_wb = load_workbook(file_path, data_only=True, read_only=True)
-    try:
-        if sheet_name not in temp_wb.sheetnames:
-            return # Should not happen as sheet was found earlier
-            
-        temp_ws = temp_wb[sheet_name]
-        # Column K is 11
-        limit_val = temp_ws.cell(row=row, column=11).value
-        
-        # Convert to float, handling None or non-numeric strings
-        try:
-            limit_float = float(limit_val) if limit_val not in (None, "") else 0.0
-        except (ValueError, TypeError):
-            limit_float = 0.0
-
-        if limit_float < capital:
-            raise ValueError(
-                f".....$$$.....Capital limit reached.....$$$....."
-
-            )
-    finally:
-        temp_wb.close()
-
-
-# Depricated: Use validate_capital_limit_xlsx instead
-def validate_capital_limit_xls(sheet, row: int, capital: float, employee_name: str, institution: str, acc_no: str):
-    """Validation for xlrd (.xls) with detailed loan-context messaging."""
-    if capital is None or capital <= 0:
-        return
-        
-    # Column K is 10 (0-indexed)
-    limit_value = 0.0
-    if sheet.ncols > 10:
-        val = sheet.cell_value(row, 10)
-        limit_value = float(val) if val not in (None, "") else 0.0
-        
-    if limit_value < capital:
-        raise ValueError(
-            f"Capital limit reached or insufficient: Employee {employee_name} at {institution} (Acc: {acc_no}) "
-            f"has a remaining balance of {limit_value:.2f}, which is less than the requested update of {capital:.2f}. "
-            f"Account is near to be closed or fully settled."
-        )
-    
-
 
 
 

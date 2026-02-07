@@ -6,6 +6,7 @@ from util.personal_accounts import update_personal_account
 from util.atomic_excel_operations import atomic_excel_operation  # Import our atomic operations
 from util.trial_balance_updates import update_capital_trial_balance, update_interest_trial_balance
 from util.main_ledger_update import update_main_ledger
+from util.validate_capital_limit_utilities import validate_capital_limit_xlsx
 import os
 from dotenv import load_dotenv
 
@@ -194,10 +195,31 @@ def submit_payment():
         description = data.get("description")
         ledger_debit_column = data.get("ledger_debit_column")
         ledger_interest_column = data.get("ledger_interest_column")
+
+
         
         # Validate required fields
         if not all([institute, employee, cheq_no, acc_no, date]) or (capital_amount is None and interest_amount is None):
             return jsonify({"error": "Institution, Employee, Bill No, Cheq No, and Acc No are required. Either Capital or Interest amount must be provided."}), 400
+        
+        if capital_amount:
+            try:
+                logger.info(
+            "INITIATING VALIDATION: Checking capital limit for %s (%s) at %s. Requested: %s", 
+            employee, acc_no, institute, capital_amount
+            )
+                validate_capital_limit_xlsx(
+                    employee_name=employee,
+                    institution_name=institute,
+                    acc_no=acc_no,
+                    capital=float(capital_amount)
+                )
+                logger.info("VALIDATION SUCCESS: Capital limit check passed for %s.", employee)
+            except ValueError as ve:
+                logger.warning(f"Validation Failed: {str(ve)}")
+                return jsonify({"error": str(ve)}), 400
+            except FileNotFoundError as fe:
+                return jsonify({"error": f"Account file not found: {str(fe)}"}), 404
         
         # Perform atomic Excel operation
         with atomic_excel_operation(EXCEL_FILE_PATH) as workbook:
@@ -275,138 +297,6 @@ def submit_payment():
         logger.error(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
-
-# def perform_batch_payment_operation(workbook, data):
-#     """
-#     Separated batch payment logic to work with atomic operations
-#     """
-#     # Extract batch data
-#     date = data.get("date")
-#     first_entry = data.get("first_entry")
-#     employees = data.get("employees", [])
-
-#     # Convert first_entry to integer
-#     fer = int(first_entry)
-    
-#     ws = workbook["Sheet1"]  # Using Sheet1 by default
-
-#     # Track the current row for each iteration
-#     current_row = fer
-#     updated_rows = []
-
-#     # Process each employee
-#     for employee in employees:
-#         # Extract employee data
-#         institute = employee.get("institution")
-#         name = employee.get("name")
-#         capital_amount = employee.get("capitalAmount")
-#         interest_amount = employee.get("interestAmount")
-#         acc_no = employee.get("accNo")
-#         bank_name = employee.get("bankName", "")
-#         description = employee.get("description", "")
-
-#         # Validate required fields for each employee
-#         if not all([institute, name, acc_no]) or (capital_amount is None and interest_amount is None):
-#             raise ValueError(f"Missing required fields for employee {name}")
-
-#         # Convert amounts to float for numeric handling if they exist
-#         capital_value = None
-#         if capital_amount:
-#             try:
-#                 capital_value = float(capital_amount)
-#             except ValueError:
-#                 raise ValueError(f"Capital amount must be a valid number for employee {name}")
-                
-#         interest_value = None
-#         if interest_amount:
-#             try:
-#                 interest_value = float(interest_amount)
-#             except ValueError:
-#                 raise ValueError(f"Interest amount must be a valid number for employee {name}")
-
-#         # Check if the cells from Bfer to Jfer are empty
-#         is_empty_row = True
-#         for col in range(2, 11):  # B to J columns (2 to 10 in 0-based indexing)
-#             cell_value = ws.cell(row=current_row, column=col).value
-#             if cell_value not in (None, ""):
-#                 is_empty_row = False
-#                 break
-
-#         # If the current row isn't empty, find three consecutive empty rows
-#         if not is_empty_row:
-#             logger.info(f"Row {current_row} is not empty, searching for three consecutive empty rows...")
-#             found = False
-            
-#             for row_num in range(current_row, ws.max_row + 100):  # +100 to ensure we scan enough rows
-#                 empty_count = 0
-#                 empty_rows = []
-                
-#                 for check_row in range(row_num, row_num + 3):  # Check for 3 consecutive empty rows
-#                     row_empty = True
-#                     for col in range(2, 11):  # B to J columns
-#                         if ws.cell(row=check_row, column=col).value not in (None, ""):
-#                             row_empty = False
-#                             break
-                    
-#                     if row_empty:
-#                         empty_count += 1
-#                         empty_rows.append(check_row)
-#                     else:
-#                         break
-                
-#                 if empty_count == 3:
-#                     # Use the second empty row
-#                     current_row = empty_rows[1]
-#                     logger.info(f"Found 3 consecutive empty rows, using row {current_row} for data entry")
-#                     found = True
-#                     break
-            
-#             if not found:
-#                 raise ValueError(f"Could not find 3 consecutive empty rows for employee {name}")
-
-#         # Add date to column A of the current row
-#         ws.cell(row=current_row, column=1).value = date
-
-#         # Update the cells with employee data
-#         ws.cell(row=current_row, column=2).value = "BS"  # Bill Number is always "BS"
-#         ws.cell(row=current_row, column=3).value = ""    # Empty Cheque No
-#         ws.cell(row=current_row, column=4).value = acc_no
-#         ws.cell(row=current_row, column=5).value = name
-#         ws.cell(row=current_row-1, column=5).value = institute
-
-#         # Set payment types
-#         ws.cell(row=current_row, column=6).value = "Capital"
-#         ws.cell(row=current_row+1, column=6).value = "Interest"
-
-#         # Handle capital amount if provided
-#         if capital_value is not None:
-#             if bank_name == "HNB":
-#                 ws.cell(row=current_row, column=9).value = capital_value
-#             elif bank_name == "Peoples Bank":
-#                 ws.cell(row=current_row, column=8).value = capital_value
-#             elif bank_name == "Cash in Hand":
-#                 ws.cell(row=current_row, column=7).value = capital_value
-
-#         # Handle interest amount if provided
-#         if interest_value is not None:
-#             if bank_name == "HNB":
-#                 ws.cell(row=current_row+1, column=9).value = interest_value
-#             elif bank_name == "Peoples Bank":
-#                 ws.cell(row=current_row+1, column=8).value = interest_value
-#             elif bank_name == "Cash in Hand":
-#                 ws.cell(row=current_row+1, column=7).value = interest_value
-
-#         # Add description if provided
-#         if description:
-#             ws.cell(row=current_row, column=13).value = description
-
-#         # Track the updated row
-#         updated_rows.append(current_row)
-
-#         # Move to the next potential row (after the interest row)
-#         current_row += 3
-
-#     return updated_rows, employees
 
 
 def perform_batch_payment_operation(workbook, data):
@@ -610,6 +500,8 @@ def submit_batch_payment():
             return jsonify({"error": "Date, first entry, and employees list are required"}), 400
 
         logs.append("Starting batch payment processing...")
+
+        
         
         # Perform atomic Excel operation
         with atomic_excel_operation(EXCEL_FILE_PATH) as workbook:
@@ -622,12 +514,49 @@ def submit_batch_payment():
         for employee in processed_employees:
             employee_name = employee.get("name")
             institution_name = employee.get("institution")
+            capital_amount = employee.get("capitalAmount")
+            acc_no = employee.get("accNo")
 
             b_no = employee.get("billNo") if employee.get("billNo") else "BS"
             # If chequeNo is empty/None, use empty string
             c_no = employee.get("chequeNo", "")
             
             logs.append(f"Processing employee: {employee_name} from {institution_name}")
+
+            validation_failed = False # Flag to track status
+
+            if capital_amount:
+                try:
+                    logger.info(
+                        "INITIATING VALIDATION: Checking capital limit for %s (%s) at %s. Requested: %s", 
+                        employee_name, acc_no, institution_name, capital_amount
+                    )
+                    
+                    validate_capital_limit_xlsx(
+                        employee_name=employee_name,
+                        institution_name=institution_name,
+                        acc_no=acc_no,
+                        capital=float(capital_amount)
+                    )
+                    
+                    logger.info("VALIDATION SUCCESS: Capital limit check passed for %s.", employee_name)
+
+                except ValueError as ve:
+                    # Logic: If validation fails, LOG it, RECORD it, and SKIP to next person
+                    error_msg = str(ve)
+                    logger.warning(f"Validation Failed for {employee_name}: {error_msg}")
+                    logs.append(f"✗ SKIPPED {employee_name}: {error_msg}")
+                    validation_failed = True # Set flag to true
+                    
+                except FileNotFoundError as fe:
+                    error_msg = f"Account file not found: {str(fe)}"
+                    logger.error(f"Validation Error for {employee_name}: {error_msg}")
+                    logs.append(f"✗ SKIPPED {employee_name}: {error_msg}")
+                    validation_failed = True # Set flag to true
+
+            # CRITICAL CHECK: If validation failed, jump to the next employee immediately
+            if validation_failed:
+                continue
             
             # Update personal account
             logger.info("Updating personal account for employee: %s of institution: %s", 
