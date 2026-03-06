@@ -1,6 +1,33 @@
 import logging
 from openpyxl import load_workbook
 from util.finding_files_sheets import find_personal_account_file, find_employee_sheet  # Import file and sheet finding functions
+import win32com.client
+import pythoncom
+
+def force_excel_recalculation(file_path):
+    """
+    Opens the Excel file using Microsoft Excel,
+    forces recalculation of formulas, and saves it.
+    """
+    # Initialize COM for the current thread
+    pythoncom.CoInitialize()
+    
+    try:
+        excel = win32com.client.Dispatch("Excel.Application")
+        excel.Visible = False
+        excel.DisplayAlerts = False
+
+        wb = excel.Workbooks.Open(file_path)
+
+        # Force full recalculation
+        excel.CalculateFull()
+
+        wb.Save()
+        wb.Close()
+        excel.Quit()
+    finally:
+        # Always uninitialize COM when done to free up resources
+        pythoncom.CoUninitialize()
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +48,8 @@ def validate_capital_limit_xlsx(employee_name: str, institution_name: str, acc_n
         file_path = find_personal_account_file(employee_name, acc_no, institution_name)
     except FileNotFoundError as e:
         raise e
+    
+    force_excel_recalculation(file_path)
 
     # 3. Load Workbook in READ-ONLY and DATA-ONLY mode
     wb = load_workbook(file_path, data_only=True, read_only=True)
@@ -35,22 +64,41 @@ def validate_capital_limit_xlsx(employee_name: str, institution_name: str, acc_n
         first_empty_row = None
         
         # We iterate to find the 4 consecutive empty rows
-        for row in range(1, ws.max_row + 100): 
-            # In read_only mode, use ws.cell(row, col).value
-            date_val = ws.cell(row=row, column=1).value
-            interest_val = ws.cell(row=row, column=8).value
+        # for row in range(1, ws.max_row + 100): 
+        #     # In read_only mode, use ws.cell(row, col).value
+            
+        #     capital_val = ws.cell(row=row, column=9).value
+            
+        #     is_row_empty = all(val in (None, "") for val in [capital_val])
+            
+        #     if is_row_empty:
+        #         if empty_rows_count == 0:
+        #             first_empty_row = row
+        #         empty_rows_count += 1
+                
+        #         if empty_rows_count >= 4:
+        #             current_row = first_empty_row
+        #             break
+        #     else:
+        #         empty_rows_count = 0
+        #         first_empty_row = None
+
+        for row in range(1, ws.max_row + 100):
+
             capital_val = ws.cell(row=row, column=9).value
-            
-            is_row_empty = all(val in (None, "") for val in [date_val, interest_val, capital_val])
-            
+
+            is_row_empty = capital_val is None or str(capital_val).strip() == ""
+
             if is_row_empty:
                 if empty_rows_count == 0:
                     first_empty_row = row
+
                 empty_rows_count += 1
-                
+
                 if empty_rows_count >= 4:
                     current_row = first_empty_row
                     break
+
             else:
                 empty_rows_count = 0
                 first_empty_row = None
@@ -60,6 +108,15 @@ def validate_capital_limit_xlsx(employee_name: str, institution_name: str, acc_n
 
         # 6. Read the Limit from Column K (Column 11) of the target row
         limit_val = ws.cell(row=current_row, column=11).value
+
+        if limit_val is None:
+            limit_val = ws.cell(row=current_row - 1, column=11).value
+
+        if limit_val is None:
+            limit_val = ws.cell(row=current_row - 2, column=11).value
+
+
+        logger.info("The limit_val read from the sheet is: %s", limit_val)
         
         # Handle conversion safely
         try:
